@@ -1,0 +1,3 @@
+# Keep this scratch directory in the repo, but never commit its contents.
+*
+!.gitignore

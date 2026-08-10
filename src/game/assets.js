@@ -1,9 +1,20 @@
+const BASE = import.meta.env.BASE_URL || "./";
+
+function resolveAssetUrl(url) {
+  if (!url) return url;
+  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) {
+    return url;
+  }
+  const cleanPath = url.startsWith("/") ? url.slice(1) : url;
+  return `${BASE}${cleanPath}`;
+}
+
 const FRAME_URLS = {
-  bottles: "/generated-assets/bottle_atlas-transparent.frames.json",
-  powerBottles: "/generated-assets/power_bottle_atlas-transparent.frames.json",
-  extraPowerBottles: "/generated-assets/extra_power_bottle_atlas-transparent.frames.json",
-  shards: "/generated-assets/shard_atlas-transparent.frames.json",
-  shatter: "/generated-assets/shatter_sheet-transparent.frames.json",
+  bottles: resolveAssetUrl("generated-assets/bottle_atlas-transparent.frames.json"),
+  powerBottles: resolveAssetUrl("generated-assets/power_bottle_atlas-transparent.frames.json"),
+  extraPowerBottles: resolveAssetUrl("generated-assets/extra_power_bottle_atlas-transparent.frames.json"),
+  shards: resolveAssetUrl("generated-assets/shard_atlas-transparent.frames.json"),
+  shatter: resolveAssetUrl("generated-assets/shatter_sheet-transparent.frames.json"),
 };
 
 function loadImage(url) {
@@ -23,7 +34,7 @@ async function loadFrames(url) {
 }
 
 export async function loadGameAssets(assets) {
-  const get = (key) => assets?.get(key);
+  const get = (key) => resolveAssetUrl(assets?.get(key));
   const [background, bottles, powerBottles, extraPowerBottles, shards, shatter, bottleFrames, powerBottleFrames, extraPowerBottleFrames, shardFrames, shatterFrames] = await Promise.all([
     loadImage(get("BAR_BG")),
     loadImage(get("BOTTLE_ATLAS")),

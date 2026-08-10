@@ -1,8 +1,8 @@
 {
-  "BOTTLE_ATLAS": "/src/assets/BOTTLE_ATLAS.png",
-  "BAR_BG": "/src/assets/BAR_BG.png",
-  "SHARD_ATLAS": "/src/assets/SHARD_ATLAS.png",
-  "SHATTER_SHEET": "/src/assets/SHATTER_SHEET.png",
-  "POWER_BOTTLE_ATLAS": "/src/assets/POWER_BOTTLE_ATLAS.png",
-  "EXTRA_POWER_BOTTLE_ATLAS": "/src/assets/EXTRA_POWER_BOTTLE_ATLAS.png"
+  "BOTTLE_ATLAS": "generated-assets/bottle_atlas-transparent.png",
+  "BAR_BG": "generated-assets/bar_bg.png",
+  "SHARD_ATLAS": "generated-assets/shard_atlas-transparent.png",
+  "SHATTER_SHEET": "generated-assets/shatter_sheet-transparent.png",
+  "POWER_BOTTLE_ATLAS": "generated-assets/power_bottle_atlas-transparent.png",
+  "EXTRA_POWER_BOTTLE_ATLAS": "generated-assets/extra_power_bottle_atlas-transparent.png"
 }

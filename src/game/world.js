@@ -20,28 +20,66 @@ const POWER_POOL = Object.values(POWER_TYPES);
 const clamp = (min, value, max) => Math.max(min, Math.min(value, max));
 const random = (min, max) => min + Math.random() * (max - min);
 
-function segmentDistanceSquared(ax, ay, bx, by, px, py) {
+function pointToSegmentDistanceSquared(px, py, ax, ay, bx, by) {
   const dx = bx - ax;
   const dy = by - ay;
   const lengthSquared = dx * dx + dy * dy;
-  const t = lengthSquared ? clamp(0, ((px - ax) * dx + (py - ay) * dy) / lengthSquared, 1) : 0;
-  const x = ax + dx * t - px;
-  const y = ay + dy * t - py;
-  return x * x + y * y;
+  if (!lengthSquared) {
+    const rx = px - ax;
+    const ry = py - ay;
+    return rx * rx + ry * ry;
+  }
+  const t = clamp(0, ((px - ax) * dx + (py - ay) * dy) / lengthSquared, 1);
+  const projX = ax + dx * t;
+  const projY = ay + dy * t;
+  const rx = px - projX;
+  const ry = py - projY;
+  return rx * rx + ry * ry;
+}
+
+function crossProduct(p1, p2, p3) {
+  return (p2.x - p1.x) * (p3.y - p1.y) - (p2.y - p1.y) * (p3.x - p1.x);
+}
+
+function segmentsIntersect(a, b, c, d) {
+  const cp1 = crossProduct(a, b, c);
+  const cp2 = crossProduct(a, b, d);
+  const cp3 = crossProduct(c, d, a);
+  const cp4 = crossProduct(c, d, b);
+
+  if (((cp1 > 0 && cp2 < 0) || (cp1 < 0 && cp2 > 0))
+      && ((cp3 > 0 && cp4 < 0) || (cp3 < 0 && cp4 > 0))) {
+    return true;
+  }
+  return false;
+}
+
+function segmentToSegmentDistanceSquared(a, b, c, d) {
+  if (segmentsIntersect(a, b, c, d)) return 0;
+  return Math.min(
+    pointToSegmentDistanceSquared(a.x, a.y, c.x, c.y, d.x, d.y),
+    pointToSegmentDistanceSquared(b.x, b.y, c.x, c.y, d.x, d.y),
+    pointToSegmentDistanceSquared(c.x, c.y, a.x, a.y, b.x, b.y),
+    pointToSegmentDistanceSquared(d.x, d.y, a.x, a.y, b.x, b.y),
+  );
 }
 
 function bottleTouchesSegment(bottle, a, b) {
-  const radius = bottle.size * 0.14;
-  const axisX = -Math.sin(bottle.angle) * bottle.size * 0.28;
-  const axisY = Math.cos(bottle.angle) * bottle.size * 0.28;
-  return [-1, 0, 1].some((offset) => segmentDistanceSquared(
-    a.x,
-    a.y,
-    b.x,
-    b.y,
-    bottle.x + axisX * offset,
-    bottle.y + axisY * offset,
-  ) <= radius * radius);
+  const halfHeight = bottle.size * 0.46;
+  const halfWidth = bottle.size * 0.24;
+  const slashRadius = Math.max(14, bottle.size * 0.12);
+  const thresholdRadius = halfWidth + slashRadius;
+
+  const sin = Math.sin(bottle.angle);
+  const cos = Math.cos(bottle.angle);
+
+  const axisX = -sin * halfHeight;
+  const axisY = cos * halfHeight;
+
+  const c = { x: bottle.x - axisX, y: bottle.y - axisY };
+  const d = { x: bottle.x + axisX, y: bottle.y + axisY };
+
+  return segmentToSegmentDistanceSquared(a, b, c, d) <= thresholdRadius * thresholdRadius;
 }
 
 function bottleData(frame) {
@@ -83,6 +121,7 @@ export function createWorld(config) {
     milestoneTimer: 0,
     milestoneText: "",
     lastCallShown: false,
+    onHit: null,
   };
 }
 
@@ -238,6 +277,18 @@ export function updateWorld(world, dt) {
     && bottle.x > -bottle.size * 1.4
     && bottle.x < world.width + bottle.size * 1.4
   ));
+
+  if (world.trail.length > 0 && world.bottles.length > 0) {
+    for (let i = 0; i < world.trail.length; i += 1) {
+      const p1 = world.trail[i];
+      const p2 = world.trail[i + 1] || p1;
+      const result = sliceSegment(world, p1, p2);
+      if (result.hits.length && world.onHit) {
+        world.onHit(result);
+      }
+      if (!world.bottles.length) break;
+    }
+  }
 
   world.spawnTimer -= dt;
   if (world.spawnTimer <= 0) {

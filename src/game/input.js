@@ -27,6 +27,8 @@ export function bindSliceInput(canvas, world, {
     swipeSoundPlayed = false;
     beginSliceStroke(world);
     addTrailPoint(world, previous.x, previous.y);
+    const result = sliceSegment(world, previous, previous);
+    if (result.hits.length) onHit(result);
     canvas.setPointerCapture(event.pointerId);
   };
 
@@ -52,7 +54,7 @@ export function bindSliceInput(canvas, world, {
       swipeSoundPlayed = false;
     }
     const distance = Math.hypot(next.x - previous.x, next.y - previous.y);
-    if (distance < 3) {
+    if (distance < 1) {
       lastMoveAt = now;
       return;
     }

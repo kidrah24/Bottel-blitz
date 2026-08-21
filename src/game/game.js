@@ -151,21 +151,25 @@ export function createGame({ mount, sdk, tweaks, assets }) {
       ui.pauseButton.addEventListener("click", togglePause);
       ui.resume.addEventListener("click", resume);
 
+      const handleHit = (result) => {
+        audio?.smash(result.multiplier);
+        result.powers.forEach((power) => audio?.power(power));
+        const now = performance.now();
+        if (now - lastHaptic > 55 && sdk.device.haptics.isSupported()) {
+          lastHaptic = now;
+          void sdk.device.haptics.vibrate(result.multiplier > 1 ? [18, 24, 18] : 18).catch(() => {});
+        }
+      };
+
+      world.onHit = handleHit;
+
       inputCleanup = bindSliceInput(ui.canvas, world, {
         addTrailPoint,
         beginSliceStroke,
         endSliceStroke,
         sliceSegment,
         onSwipe: () => audio?.swipe(),
-        onHit: (result) => {
-          audio?.smash(result.multiplier);
-          result.powers.forEach((power) => audio?.power(power));
-          const now = performance.now();
-          if (now - lastHaptic > 55 && sdk.device.haptics.isSupported()) {
-            lastHaptic = now;
-            void sdk.device.haptics.vibrate(result.multiplier > 1 ? [18, 24, 18] : 18).catch(() => {});
-          }
-        },
+        onHit: handleHit,
       });
 
       Promise.all([

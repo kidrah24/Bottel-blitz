@@ -5,7 +5,7 @@ import tweaksManifest from "./tweaks.json";
 import assetsManifest from "./assets.json";
 import "./styles.css";
 
-inject();
+inject({ mode: 'auto', debug: import.meta.env.DEV });
 
 const app = document.querySelector("#app");
 const ready = await sdk.ready();

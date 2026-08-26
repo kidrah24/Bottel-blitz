@@ -1,8 +1,11 @@
 import sdk from "@playabl/sdk";
+import { inject } from "@vercel/analytics";
 import { createGame } from "./game/game.js";
 import tweaksManifest from "./tweaks.json";
 import assetsManifest from "./assets.json";
 import "./styles.css";
+
+inject();
 
 const app = document.querySelector("#app");
 const ready = await sdk.ready();

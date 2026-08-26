@@ -1,3 +1,4 @@
+import { track } from "@vercel/analytics";
 import { loadGameAssets } from "./assets.js";
 import { createArcadeAudio } from "./audio.js";
 import { bindSliceInput } from "./input.js";
@@ -63,6 +64,7 @@ export function createGame({ mount, sdk, tweaks, assets }) {
         saveProgress();
         const score = finiteScore(world.score);
         if (score !== null) void sdk.leaderboard.submit(score).catch(() => {});
+        track("round_end", { score: score ?? 0, best });
       };
 
       const loop = (time) => {
@@ -97,6 +99,7 @@ export function createGame({ mount, sdk, tweaks, assets }) {
         audio?.setMode("normal");
         audio?.setPaused(false);
         audio?.unlockAndStart();
+        track("round_start");
       };
 
       const toggleSound = () => {
@@ -125,6 +128,7 @@ export function createGame({ mount, sdk, tweaks, assets }) {
       const completeIntro = () => {
         hasSeenIntro = true;
         saveProgress();
+        track("intro_complete");
         beginRound();
       };
 

@@ -204,7 +204,6 @@ export function createUI(mount) {
     nameForm: shell.querySelector(".name-form"),
     nameInput: shell.querySelector(".name-input"),
     nameError: shell.querySelector(".name-error"),
-    nameSubmitBtn: shell.querySelector(".name-submit-btn"),
     lbOverlay: shell.querySelector(".leaderboard-overlay"),
     lbRank: shell.querySelector("[data-lb-rank]"),
     lbPlayer: shell.querySelector("[data-lb-player]"),

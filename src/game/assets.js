@@ -33,33 +33,51 @@ async function loadFrames(url) {
   return response.json();
 }
 
-export async function loadGameAssets(assets) {
+export async function loadGameAssets(assets, onProgress = () => {}) {
   const get = (key) => resolveAssetUrl(assets?.get(key));
-  const [background, bottles, powerBottles, extraPowerBottles, shards, shatter, bottleFrames, powerBottleFrames, extraPowerBottleFrames, shardFrames, shatterFrames] = await Promise.all([
-    loadImage(get("BAR_BG")),
-    loadImage(get("BOTTLE_ATLAS")),
-    loadImage(get("POWER_BOTTLE_ATLAS")),
-    loadImage(get("EXTRA_POWER_BOTTLE_ATLAS")),
-    loadImage(get("SHARD_ATLAS")),
-    loadImage(get("SHATTER_SHEET")),
-    loadFrames(FRAME_URLS.bottles),
-    loadFrames(FRAME_URLS.powerBottles),
-    loadFrames(FRAME_URLS.extraPowerBottles),
-    loadFrames(FRAME_URLS.shards),
-    loadFrames(FRAME_URLS.shatter),
-  ]);
+
+  const items = [
+    { name: "BACKGROUND", load: () => loadImage(get("BAR_BG")) },
+    { name: "BOTTLE ATLAS", load: () => loadImage(get("BOTTLE_ATLAS")) },
+    { name: "POWER BOTTLES", load: () => loadImage(get("POWER_BOTTLE_ATLAS")) },
+    { name: "EXTRA POWERS", load: () => loadImage(get("EXTRA_POWER_BOTTLE_ATLAS")) },
+    { name: "SHARDS", load: () => loadImage(get("SHARD_ATLAS")) },
+    { name: "SHATTER EFFECT", load: () => loadImage(get("SHATTER_SHEET")) },
+    { name: "BOTTLE DATA", load: () => loadFrames(FRAME_URLS.bottles) },
+    { name: "POWER DATA", load: () => loadFrames(FRAME_URLS.powerBottles) },
+    { name: "EXTRA POWER DATA", load: () => loadFrames(FRAME_URLS.extraPowerBottles) },
+    { name: "SHARD DATA", load: () => loadFrames(FRAME_URLS.shards) },
+    { name: "SHATTER DATA", load: () => loadFrames(FRAME_URLS.shatter) },
+  ];
+
+  let completed = 0;
+  onProgress(0.05, "PREPARING ARENA...");
+
+  const results = await Promise.all(
+    items.map(async (item) => {
+      try {
+        const result = await item.load();
+        completed += 1;
+        onProgress(0.05 + (completed / items.length) * 0.95, `LOADING ${item.name}...`);
+        return result;
+      } catch (err) {
+        console.error(`Error loading asset ${item.name}:`, err);
+        throw err;
+      }
+    })
+  );
 
   return {
-    background,
-    bottles,
-    powerBottles,
-    extraPowerBottles,
-    shards,
-    shatter,
-    bottleFrames: bottleFrames.frames,
-    powerBottleFrames: powerBottleFrames.frames,
-    extraPowerBottleFrames: extraPowerBottleFrames.frames,
-    shardFrames: shardFrames.frames,
-    shatterFrames: shatterFrames.frames,
+    background: results[0],
+    bottles: results[1],
+    powerBottles: results[2],
+    extraPowerBottles: results[3],
+    shards: results[4],
+    shatter: results[5],
+    bottleFrames: results[6].frames,
+    powerBottleFrames: results[7].frames,
+    extraPowerBottleFrames: results[8].frames,
+    shardFrames: results[9].frames,
+    shatterFrames: results[10].frames,
   };
 }

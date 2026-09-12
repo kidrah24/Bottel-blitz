@@ -152,6 +152,7 @@ function drawPage(canvas, assets, page) {
 export function createIntroController({ ui, onComplete }) {
   let assets = null;
   let page = 0;
+  let manualMode = false;
 
   const render = () => {
     const content = PAGES[page];
@@ -159,14 +160,14 @@ export function createIntroController({ ui, onComplete }) {
     ui.introTitle.textContent = content.title;
     ui.introCopy.textContent = content.copy;
     ui.introDetail.textContent = content.detail;
-    ui.introNextLabel.textContent = page === PAGES.length - 1 ? "LET'S SMASH" : "NEXT";
+    ui.introNextLabel.textContent = page === PAGES.length - 1 ? (manualMode ? "BACK TO MENU" : "LET'S SMASH") : "NEXT";
     ui.introDots.forEach((dot, index) => dot.classList.toggle("is-active", index === page));
     drawPage(ui.introCanvas, assets, page);
   };
 
   const finish = () => {
     ui.intro.hidden = true;
-    onComplete();
+    onComplete({ manualMode });
   };
 
   const next = () => {
@@ -182,10 +183,12 @@ export function createIntroController({ ui, onComplete }) {
   ui.introSkip.addEventListener("click", finish);
 
   return {
-    show(assetSet) {
+    show(assetSet, isManual = false) {
       assets = assetSet;
       page = 0;
+      manualMode = isManual;
       ui.start.hidden = true;
+      if (ui.pauseOverlay) ui.pauseOverlay.hidden = true;
       ui.intro.hidden = false;
       requestAnimationFrame(render);
     },

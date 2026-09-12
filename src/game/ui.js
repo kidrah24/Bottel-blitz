@@ -16,6 +16,19 @@ export function createUI(mount) {
     <div class="power-status" hidden data-power-status></div>
     <div class="milestone-toast" hidden data-milestone></div>
     <div class="play-hint" hidden>ONE SWIPE: 2=x2 • 3=x3</div>
+    <div class="loading-overlay overlay" data-loading-overlay>
+      <div class="loading-stack">
+        <div class="loading-bottle-art" aria-hidden="true">
+          <span class="loading-bottle">🍾</span>
+          <span class="loading-sparkle">✨</span>
+        </div>
+        <h1 class="loading-title">BOTTLE<br><span>BLITZ</span></h1>
+        <div class="loading-bar-track">
+          <div class="loading-bar-fill" data-loading-fill style="width: 0%;"></div>
+        </div>
+        <p class="loading-status" data-loading-status>PREPARING ARENA...</p>
+      </div>
+    </div>
     <div class="start-overlay overlay" role="button" tabindex="0" aria-label="Start game">
       <div class="start-stack">
         <h1 class="start-title">BOTTLE<br><span>BLITZ</span></h1>
@@ -23,7 +36,10 @@ export function createUI(mount) {
           <span class="hud-icon">👤</span> <span data-player-handle>PLAYER</span> <span class="edit-icon">✎</span>
         </div>
         <p class="start-prompt">Loading…</p>
-        <button class="control-btn start-leaderboard-btn" type="button"><span class="control-label">🏆 LEADERBOARD</span></button>
+        <div class="start-actions">
+          <button class="control-btn start-guide-btn" type="button"><span class="control-label">📖 HOW TO PLAY</span></button>
+          <button class="control-btn start-leaderboard-btn" type="button"><span class="control-label">🏆 LEADERBOARD</span></button>
+        </div>
       </div>
     </div>
     <div class="intro-overlay overlay" hidden>
@@ -50,6 +66,7 @@ export function createUI(mount) {
       <div class="pause-stack">
         <h2>PAUSED</h2>
         <button class="control-btn resume-btn" type="button"><span class="control-label">RESUME</span></button>
+        <button class="control-btn pause-guide-btn" type="button"><span class="control-label">📖 HOW TO PLAY</span></button>
       </div>
     </div>
     <div class="results-overlay overlay" hidden>
@@ -108,6 +125,11 @@ export function createUI(mount) {
     introNextLabel: shell.querySelector("[data-intro-next-label]"),
     introSkip: shell.querySelector(".intro-skip"),
     introDots: [...shell.querySelectorAll(".intro-dots span")],
+    loadingOverlay: shell.querySelector("[data-loading-overlay]"),
+    loadingFill: shell.querySelector("[data-loading-fill]"),
+    loadingStatus: shell.querySelector("[data-loading-status]"),
+    startGuideBtn: shell.querySelector(".start-guide-btn"),
+    pauseGuideBtn: shell.querySelector(".pause-guide-btn"),
     prompt: shell.querySelector(".start-prompt"),
     results: shell.querySelector(".results-overlay"),
     retry: shell.querySelector(".retry-btn"),
@@ -147,6 +169,23 @@ export function createUI(mount) {
 
   return {
     ...elements,
+    updateLoadingProgress(percent, statusText) {
+      if (elements.loadingFill) {
+        const pct = Math.max(0, Math.min(100, Math.round(percent * 100)));
+        elements.loadingFill.style.width = `${pct}%`;
+      }
+      if (elements.loadingStatus && statusText) {
+        elements.loadingStatus.textContent = statusText;
+      }
+    },
+    hideLoadingScreen() {
+      if (elements.loadingOverlay) {
+        elements.loadingOverlay.classList.add("fade-out");
+        setTimeout(() => {
+          elements.loadingOverlay.hidden = true;
+        }, 400);
+      }
+    },
     setPlayerHandle(name, isLocked = false) {
       if (elements.playerHandle) {
         elements.playerHandle.textContent = name || "SET NAME";

@@ -136,14 +136,24 @@ export function createGame({ mount, sdk, tweaks, assets }) {
         audio?.setPaused(false);
       };
 
-      const completeIntro = () => {
+      const completeIntro = ({ manualMode = false } = {}) => {
         hasSeenIntro = true;
         saveProgress();
         track("intro_complete");
-        beginRound();
+        if (manualMode) {
+          ui.start.hidden = false;
+        } else {
+          beginRound();
+        }
       };
 
       const introController = createIntroController({ ui, onComplete: completeIntro });
+
+      const openGameGuide = () => {
+        if (!loadedAssets) return;
+        audio?.unlockAndStart();
+        introController.show(loadedAssets, true);
+      };
 
       const promptPlayerName = (onSuccess) => {
         if (leaderboardManager.hasPlayerName()) {
@@ -186,7 +196,11 @@ export function createGame({ mount, sdk, tweaks, assets }) {
       };
 
       const activateFromOverlay = (event) => {
-        if (event.target.closest(".player-tag-btn") || event.target.closest(".start-leaderboard-btn")) return;
+        if (
+          event.target.closest(".player-tag-btn") ||
+          event.target.closest(".start-leaderboard-btn") ||
+          event.target.closest(".start-guide-btn")
+        ) return;
         if (event.type === "keydown" && event.key !== "Enter" && event.key !== " ") return;
         if (ui.start.classList.contains("has-error")) {
           window.location.reload();
@@ -196,7 +210,7 @@ export function createGame({ mount, sdk, tweaks, assets }) {
 
         const proceedToGame = () => {
           if (!hasSeenIntro) {
-            introController.show(loadedAssets);
+            introController.show(loadedAssets, false);
           } else {
             beginRound();
           }
@@ -217,6 +231,14 @@ export function createGame({ mount, sdk, tweaks, assets }) {
       ui.pauseButton.addEventListener("click", togglePause);
       ui.resume.addEventListener("click", resume);
 
+      ui.startGuideBtn?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openGameGuide();
+      });
+      ui.pauseGuideBtn?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openGameGuide();
+      });
       ui.playerTagBtn?.addEventListener("click", (e) => {
         e.stopPropagation();
         if (leaderboardManager.hasPlayerName()) return;
@@ -260,7 +282,9 @@ export function createGame({ mount, sdk, tweaks, assets }) {
       });
 
       Promise.all([
-        loadGameAssets(assets),
+        loadGameAssets(assets, (progress, statusText) => {
+          ui.updateLoadingProgress(progress, statusText);
+        }),
         sdk.gameState.load().catch(() => null),
         sdk.audio.getContext().catch(() => null),
       ]).then(([assetSet, saved, managedAudio]) => {
@@ -277,6 +301,8 @@ export function createGame({ mount, sdk, tweaks, assets }) {
         audio?.setMuted(muted);
         renderer.setAssets(assetSet);
         readyToPlay = true;
+        ui.updateLoadingProgress(1, "READY!");
+        ui.hideLoadingScreen();
         ui.setReady(best);
         ui.setSoundMuted(muted);
         ui.setPlayerHandle(leaderboardManager.getPlayerName(), leaderboardManager.hasPlayerName());

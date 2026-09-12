@@ -1,3 +1,12 @@
+const PRO_TIPS = [
+  "Slice multiple bottles in one continuous swipe to trigger massive score combos!",
+  "Rainbow bottles trigger an 8-second frenzy rush from all sides!",
+  "Clock Freeze powerups pause the timer so you can slice stress-free!",
+  "Lime green bottles add +5 BONUS SECONDS directly to your clock!",
+  "Purple bottles unleash a shockwave that shatters surrounding bottles!",
+  "Gold powerups double all your slicing points for a limited time!",
+];
+
 export function createUI(mount) {
   const shell = document.createElement("section");
   shell.className = "game-shell";
@@ -17,16 +26,48 @@ export function createUI(mount) {
     <div class="milestone-toast" hidden data-milestone></div>
     <div class="play-hint" hidden>ONE SWIPE: 2=x2 • 3=x3</div>
     <div class="loading-overlay overlay" data-loading-overlay>
+      <div class="loading-backdrop-glow"></div>
+      
+      <div class="loading-top-badge">
+        <span class="loading-mode-tag">MODE</span>
+        <span class="loading-mode-title">60S BOTTLE SMASH</span>
+      </div>
+
       <div class="loading-stack">
-        <div class="loading-bottle-art" aria-hidden="true">
-          <span class="loading-bottle">🍾</span>
-          <span class="loading-sparkle">✨</span>
+        <div class="loading-hero-graphic" aria-hidden="true">
+          <div class="power-orbit p-rainbow" title="Rainbow Rush">🌈</div>
+          <div class="power-orbit p-freeze" title="Clock Freeze">🧊</div>
+          <div class="power-orbit p-shockwave" title="Shockwave">⚡</div>
+          <div class="power-orbit p-double" title="x2 Points">2️⃣</div>
+          
+          <div class="loading-bottle-art">
+            <span class="loading-bottle">🍾</span>
+            <span class="loading-sparkle">✨</span>
+          </div>
         </div>
+
         <h1 class="loading-title">BOTTLE<br><span>BLITZ</span></h1>
-        <div class="loading-bar-track">
-          <div class="loading-bar-fill" data-loading-fill style="width: 0%;"></div>
+
+        <div class="loading-progress-box">
+          <div class="loading-progress-header">
+            <span class="loading-status" data-loading-status>PREPARING ARENA...</span>
+            <span class="loading-percent" data-loading-percent>0%</span>
+          </div>
+          <div class="loading-bar-track">
+            <div class="loading-bar-fill" data-loading-fill style="width: 0%;"></div>
+          </div>
         </div>
-        <p class="loading-status" data-loading-status>PREPARING ARENA...</p>
+
+        <div class="loading-tip-card">
+          <div class="loading-tip-header">
+            <span class="tip-icon">💡</span> <strong>PRO TIP</strong>
+          </div>
+          <p class="loading-tip-text" data-loading-tip></p>
+        </div>
+
+        <div class="loading-audio-hint">
+          <span>🎧</span> BEST EXPERIENCED WITH SOUND ON
+        </div>
       </div>
     </div>
     <div class="start-overlay overlay" role="button" tabindex="0" aria-label="Start game">
@@ -128,6 +169,8 @@ export function createUI(mount) {
     loadingOverlay: shell.querySelector("[data-loading-overlay]"),
     loadingFill: shell.querySelector("[data-loading-fill]"),
     loadingStatus: shell.querySelector("[data-loading-status]"),
+    loadingPercent: shell.querySelector("[data-loading-percent]"),
+    loadingTip: shell.querySelector("[data-loading-tip]"),
     startGuideBtn: shell.querySelector(".start-guide-btn"),
     pauseGuideBtn: shell.querySelector(".pause-guide-btn"),
     prompt: shell.querySelector(".start-prompt"),
@@ -165,14 +208,22 @@ export function createUI(mount) {
     lbCloseX: shell.querySelector(".leaderboard-close-x"),
   };
 
+  if (elements.loadingTip) {
+    const randomTip = PRO_TIPS[Math.floor(Math.random() * PRO_TIPS.length)];
+    elements.loadingTip.textContent = randomTip;
+  }
+
   let hintTimer = 0;
 
   return {
     ...elements,
     updateLoadingProgress(percent, statusText) {
+      const pct = Math.max(0, Math.min(100, Math.round(percent * 100)));
       if (elements.loadingFill) {
-        const pct = Math.max(0, Math.min(100, Math.round(percent * 100)));
         elements.loadingFill.style.width = `${pct}%`;
+      }
+      if (elements.loadingPercent) {
+        elements.loadingPercent.textContent = `${pct}%`;
       }
       if (elements.loadingStatus && statusText) {
         elements.loadingStatus.textContent = statusText;

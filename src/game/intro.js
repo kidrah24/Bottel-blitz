@@ -179,6 +179,15 @@ export function createIntroController({ ui, onComplete }) {
     render();
   };
 
+  const resizeObserver = new ResizeObserver(() => {
+    if (!ui.intro.hidden && assets) {
+      render();
+    }
+  });
+  if (ui.introCanvas) {
+    resizeObserver.observe(ui.introCanvas);
+  }
+
   ui.introNext.addEventListener("click", next);
   ui.introSkip.addEventListener("click", finish);
 
@@ -193,6 +202,7 @@ export function createIntroController({ ui, onComplete }) {
       requestAnimationFrame(render);
     },
     destroy() {
+      resizeObserver.disconnect();
       ui.introNext.removeEventListener("click", next);
       ui.introSkip.removeEventListener("click", finish);
     },

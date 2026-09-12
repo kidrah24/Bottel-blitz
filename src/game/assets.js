@@ -51,14 +51,15 @@ export async function loadGameAssets(assets, onProgress = () => {}) {
   ];
 
   let completed = 0;
-  onProgress(0.05, "PREPARING ARENA...");
+  onProgress(0.1, "PREPARING ARENA...");
 
   const results = await Promise.all(
-    items.map(async (item) => {
+    items.map(async (item, idx) => {
       try {
+        await new Promise((r) => setTimeout(r, (idx + 1) * 90));
         const result = await item.load();
         completed += 1;
-        onProgress(0.05 + (completed / items.length) * 0.95, `LOADING ${item.name}...`);
+        onProgress(0.1 + (completed / items.length) * 0.85, `LOADING ${item.name}...`);
         return result;
       } catch (err) {
         console.error(`Error loading asset ${item.name}:`, err);

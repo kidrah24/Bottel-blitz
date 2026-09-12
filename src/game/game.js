@@ -281,6 +281,9 @@ export function createGame({ mount, sdk, tweaks, assets }) {
         onHit: handleHit,
       });
 
+      const MIN_LOADING_TIME = 1800; // Minimum 1.8 seconds loading screen time
+      const loadStartTime = performance.now();
+
       Promise.all([
         loadGameAssets(assets, (progress, statusText) => {
           ui.updateLoadingProgress(progress, statusText);
@@ -301,13 +304,20 @@ export function createGame({ mount, sdk, tweaks, assets }) {
         audio?.setMuted(muted);
         renderer.setAssets(assetSet);
         readyToPlay = true;
+
         ui.updateLoadingProgress(1, "READY!");
-        ui.hideLoadingScreen();
-        ui.setReady(best);
-        ui.setSoundMuted(muted);
-        ui.setPlayerHandle(leaderboardManager.getPlayerName(), leaderboardManager.hasPlayerName());
-        // The surface was display:none while loading; size only after reveal.
-        renderer.resize();
+        const elapsed = performance.now() - loadStartTime;
+        const remaining = Math.max(0, MIN_LOADING_TIME - elapsed);
+
+        setTimeout(() => {
+          if (destroyed) return;
+          ui.hideLoadingScreen();
+          ui.setReady(best);
+          ui.setSoundMuted(muted);
+          ui.setPlayerHandle(leaderboardManager.getPlayerName(), leaderboardManager.hasPlayerName());
+          // The surface was display:none while loading; size only after reveal.
+          renderer.resize();
+        }, remaining);
       }).catch(() => {
         if (!destroyed) ui.setLoadError();
       });

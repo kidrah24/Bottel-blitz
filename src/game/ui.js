@@ -19,7 +19,11 @@ export function createUI(mount) {
     <div class="start-overlay overlay" role="button" tabindex="0" aria-label="Start game">
       <div class="start-stack">
         <h1 class="start-title">BOTTLE<br><span>BLITZ</span></h1>
+        <div class="player-tag-btn" role="button" tabindex="0" title="Click to change handle">
+          <span class="hud-icon">👤</span> <span data-player-handle>PLAYER</span> <span class="edit-icon">✎</span>
+        </div>
         <p class="start-prompt">Loading…</p>
+        <button class="control-btn start-leaderboard-btn" type="button"><span class="control-label">🏆 LEADERBOARD</span></button>
       </div>
     </div>
     <div class="intro-overlay overlay" hidden>
@@ -53,7 +57,37 @@ export function createUI(mount) {
         <p class="result-kicker">TIME!</p>
         <h2><strong data-result>0</strong><span>POINTS</span></h2>
         <p class="result-best">BEST <strong data-result-best>0</strong></p>
-        <button class="control-btn retry-btn" type="button"><span class="control-label">SMASH AGAIN</span></button>
+        <div class="results-actions">
+          <button class="control-btn retry-btn" type="button"><span class="control-label">SMASH AGAIN</span></button>
+          <button class="control-btn results-leaderboard-btn" type="button"><span class="control-label">🏆 LEADERBOARD</span></button>
+        </div>
+      </div>
+    </div>
+    <div class="name-overlay overlay" hidden>
+      <div class="name-card">
+        <h2 class="name-title">ENTER YOUR NAME</h2>
+        <p class="name-subtitle">Set your handle to join the Global Leaderboard</p>
+        <form class="name-form" action="#" onsubmit="return false;">
+          <input type="text" class="name-input" maxlength="15" placeholder="e.g. SmashMaster" autocomplete="off" spellcheck="false" required />
+          <p class="name-error" hidden>Please enter 2 to 15 characters</p>
+          <button class="control-btn name-submit-btn" type="submit"><span class="control-label">CONFIRM & PLAY</span></button>
+        </form>
+      </div>
+    </div>
+    <div class="leaderboard-overlay overlay" hidden>
+      <div class="leaderboard-card">
+        <div class="leaderboard-header">
+          <h2>🏆 GLOBAL LEADERBOARD</h2>
+          <button class="icon-btn leaderboard-close-x" type="button" aria-label="Close leaderboard">×</button>
+        </div>
+        <div class="leaderboard-stats">
+          <div class="stat-pill"><span class="stat-label">YOUR RANK</span> <strong data-lb-rank>#--</strong></div>
+          <div class="stat-pill"><span class="stat-label">PLAYER</span> <strong data-lb-player>--</strong></div>
+        </div>
+        <div class="leaderboard-scroll">
+          <ul class="leaderboard-list" data-lb-list></ul>
+        </div>
+        <button class="control-btn leaderboard-close-btn" type="button"><span class="control-label">BACK TO MENU</span></button>
       </div>
     </div>
   `;
@@ -92,12 +126,70 @@ export function createUI(mount) {
     result: shell.querySelector("[data-result]"),
     resultBest: shell.querySelector("[data-result-best]"),
     timerBadge: shell.querySelector(".timer-badge"),
+    playerHandle: shell.querySelector("[data-player-handle]"),
+    playerTagBtn: shell.querySelector(".player-tag-btn"),
+    startLbBtn: shell.querySelector(".start-leaderboard-btn"),
+    resultsLbBtn: shell.querySelector(".results-leaderboard-btn"),
+    nameOverlay: shell.querySelector(".name-overlay"),
+    nameForm: shell.querySelector(".name-form"),
+    nameInput: shell.querySelector(".name-input"),
+    nameError: shell.querySelector(".name-error"),
+    nameSubmitBtn: shell.querySelector(".name-submit-btn"),
+    lbOverlay: shell.querySelector(".leaderboard-overlay"),
+    lbRank: shell.querySelector("[data-lb-rank]"),
+    lbPlayer: shell.querySelector("[data-lb-player]"),
+    lbList: shell.querySelector("[data-lb-list]"),
+    lbCloseBtn: shell.querySelector(".leaderboard-close-btn"),
+    lbCloseX: shell.querySelector(".leaderboard-close-x"),
   };
 
   let hintTimer = 0;
 
   return {
     ...elements,
+    setPlayerHandle(name) {
+      if (elements.playerHandle) {
+        elements.playerHandle.textContent = name || "SET NAME";
+      }
+    },
+    showNamePrompt(currentName = "") {
+      elements.nameInput.value = currentName;
+      elements.nameError.hidden = true;
+      elements.nameOverlay.hidden = false;
+      setTimeout(() => elements.nameInput.focus(), 100);
+    },
+    hideNamePrompt() {
+      elements.nameOverlay.hidden = true;
+    },
+    showLeaderboardModal(scores, playerRank, playerName) {
+      elements.lbRank.textContent = playerRank ? `#${playerRank}` : "#--";
+      elements.lbPlayer.textContent = playerName || "ANONYMOUS";
+      
+      elements.lbList.innerHTML = scores.map((entry, index) => {
+        const rank = index + 1;
+        let medal = "";
+        let rankClass = "";
+        if (rank === 1) { medal = "🥇"; rankClass = "rank-1"; }
+        else if (rank === 2) { medal = "🥈"; rankClass = "rank-2"; }
+        else if (rank === 3) { medal = "🥉"; rankClass = "rank-3"; }
+        else { medal = `#${rank}`; }
+
+        const isUser = entry.isCurrentUser || (playerName && entry.name.toLowerCase() === playerName.toLowerCase());
+
+        return `
+          <li class="lb-item ${rankClass} ${isUser ? 'is-user' : ''}">
+            <span class="lb-rank">${medal}</span>
+            <span class="lb-name">${entry.name}${isUser ? ' <small>(YOU)</small>' : ''}</span>
+            <span class="lb-score">${entry.score.toLocaleString()} PTS</span>
+          </li>
+        `;
+      }).join("");
+
+      elements.lbOverlay.hidden = false;
+    },
+    hideLeaderboardModal() {
+      elements.lbOverlay.hidden = true;
+    },
     setReady(best) {
       elements.canvas.hidden = false;
       elements.hud.hidden = false;
@@ -115,6 +207,8 @@ export function createUI(mount) {
       elements.results.hidden = true;
       elements.intro.hidden = true;
       elements.pauseOverlay.hidden = true;
+      elements.nameOverlay.hidden = true;
+      elements.lbOverlay.hidden = true;
       elements.hint.hidden = false;
       elements.time.textContent = Math.ceil(duration);
       elements.timerBadge.classList.remove("urgent");
@@ -161,6 +255,8 @@ export function createUI(mount) {
       elements.powerStatus.hidden = true;
       elements.pauseOverlay.hidden = true;
       elements.intro.hidden = true;
+      elements.nameOverlay.hidden = true;
+      elements.lbOverlay.hidden = true;
       elements.result.textContent = score;
       elements.resultBest.textContent = best;
       elements.results.hidden = false;
@@ -171,3 +267,4 @@ export function createUI(mount) {
     },
   };
 }
+

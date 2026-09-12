@@ -1,0 +1,127 @@
+const LOCAL_STORAGE_KEY = "bottle_blitz_leaderboard_v1";
+const PLAYER_NAME_KEY = "bottle_blitz_player_name";
+
+const DEFAULT_LEADERBOARD = [
+  { id: "def-1", name: "SmasherKing", score: 480, date: "2026-09-10" },
+  { id: "def-2", name: "ViperBlade", score: 410, date: "2026-09-11" },
+  { id: "def-3", name: "BottleNinja", score: 365, date: "2026-09-09" },
+  { id: "def-4", name: "GlassBreaker", score: 310, date: "2026-09-12" },
+  { id: "def-5", name: "BlitzQueen", score: 275, date: "2026-09-08" },
+  { id: "def-6", name: "CyberSwipe", score: 230, date: "2026-09-07" },
+  { id: "def-7", name: "NeonSlice", score: 195, date: "2026-09-06" },
+  { id: "def-8", name: "SpeedyJuice", score: 160, date: "2026-09-05" },
+  { id: "def-9", name: "ShardMaster", score: 125, date: "2026-09-04" },
+  { id: "def-10", name: "RookieRusher", score: 90, date: "2026-09-03" },
+];
+
+export class LeaderboardManager {
+  constructor() {
+    this.playerName = this.loadPlayerName();
+    this.scores = this.loadScores();
+  }
+
+  loadPlayerName() {
+    try {
+      return localStorage.getItem(PLAYER_NAME_KEY) || "";
+    } catch {
+      return "";
+    }
+  }
+
+  setPlayerName(name) {
+    const trimmed = (name || "").trim().slice(0, 15);
+    this.playerName = trimmed;
+    try {
+      localStorage.setItem(PLAYER_NAME_KEY, trimmed);
+    } catch {
+      // Storage unavailable
+    }
+    return trimmed;
+  }
+
+  getPlayerName() {
+    return this.playerName;
+  }
+
+  hasPlayerName() {
+    return Boolean(this.playerName && this.playerName.trim().length >= 2);
+  }
+
+  loadScores() {
+    try {
+      const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch {
+      // Fallback
+    }
+    return [...DEFAULT_LEADERBOARD];
+  }
+
+  saveScores() {
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(this.scores));
+    } catch {
+      // Storage unavailable
+    }
+  }
+
+  submitScore(score, customName = null) {
+    const name = (customName || this.playerName || "Anonymous").trim().slice(0, 15);
+    if (!Number.isFinite(score) || score <= 0) return this.scores;
+
+    const today = new Date().toISOString().split("T")[0];
+    const newEntry = {
+      id: `score-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      name,
+      score: Math.round(score),
+      date: today,
+      isCurrentUser: true,
+    };
+
+    const existingIndex = this.scores.findIndex(
+      (entry) => entry.name.toLowerCase() === name.toLowerCase(),
+    );
+
+    if (existingIndex >= 0) {
+      if (score > this.scores[existingIndex].score) {
+        this.scores[existingIndex] = {
+          ...this.scores[existingIndex],
+          score: Math.round(score),
+          date: today,
+          isCurrentUser: true,
+        };
+      }
+    } else {
+      this.scores.push(newEntry);
+    }
+
+    this.scores.sort((a, b) => b.score - a.score);
+    this.scores = this.scores.slice(0, 50);
+
+    this.saveScores();
+    return this.scores;
+  }
+
+  getTopScores(limit = 20) {
+    return this.scores.slice(0, limit);
+  }
+
+  getPlayerRank(score) {
+    const all = [...this.scores];
+    if (score > 0 && !all.some((s) => s.isCurrentUser && s.score >= score)) {
+      all.push({ name: this.playerName || "YOU", score, isCurrentUser: true });
+    }
+    all.sort((a, b) => b.score - a.score);
+    const rank = all.findIndex(
+      (s) => s.isCurrentUser || (s.name && s.name.toLowerCase() === (this.playerName || "").toLowerCase()),
+    );
+    return rank >= 0 ? rank + 1 : null;
+  }
+}
+
+export const leaderboardManager = new LeaderboardManager();

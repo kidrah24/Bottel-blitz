@@ -3,6 +3,7 @@ import { loadGameAssets } from "./assets.js";
 import { createArcadeAudio } from "./audio.js";
 import { bindSliceInput } from "./input.js";
 import { createIntroController } from "./intro.js";
+import { leaderboardManager } from "./leaderboard.js";
 import { createRenderer } from "./renderer.js";
 import { createUI } from "./ui.js";
 import {
@@ -52,18 +53,28 @@ export function createGame({ mount, sdk, tweaks, assets }) {
       let lastAudioMode = "normal";
       let lastHaptic = 0;
       let destroyed = false;
+      let pendingStartAction = null;
 
       const saveProgress = () => {
-        void sdk.gameState.save({ version: 3, best, muted, hasSeenIntro }).catch(() => {});
+        void sdk.gameState.save({
+          version: 3,
+          best,
+          muted,
+          hasSeenIntro,
+          playerName: leaderboardManager.getPlayerName(),
+        }).catch(() => {});
       };
 
       const onRoundEnd = () => {
         best = Math.max(best, world.score);
         world.best = best;
         ui.showResults(world.score, best);
-        saveProgress();
         const score = finiteScore(world.score);
-        if (score !== null) void sdk.leaderboard.submit(score).catch(() => {});
+        if (score !== null) {
+          leaderboardManager.submitScore(score);
+          void sdk.leaderboard.submit(score).catch(() => {});
+        }
+        saveProgress();
         track("round_end", { score: score ?? 0, best });
       };
 
@@ -134,18 +145,65 @@ export function createGame({ mount, sdk, tweaks, assets }) {
 
       const introController = createIntroController({ ui, onComplete: completeIntro });
 
+      const promptPlayerName = (onSuccess) => {
+        pendingStartAction = onSuccess;
+        ui.showNamePrompt(leaderboardManager.getPlayerName());
+      };
+
+      const handleNameSubmit = (e) => {
+        e?.preventDefault();
+        const val = ui.nameInput.value.trim();
+        if (val.length < 2 || val.length > 15) {
+          ui.nameError.hidden = false;
+          return;
+        }
+        ui.nameError.hidden = true;
+        leaderboardManager.setPlayerName(val);
+        ui.setPlayerHandle(val);
+        saveProgress();
+        ui.hideNamePrompt();
+        if (pendingStartAction) {
+          const action = pendingStartAction;
+          pendingStartAction = null;
+          action();
+        }
+      };
+
+      const openLeaderboard = (scoreContext = 0) => {
+        audio?.unlockAndStart();
+        const topScores = leaderboardManager.getTopScores();
+        const playerRank = leaderboardManager.getPlayerRank(scoreContext);
+        const name = leaderboardManager.getPlayerName();
+        ui.showLeaderboardModal(topScores, playerRank, name);
+      };
+
+      const closeLeaderboard = () => {
+        ui.hideLeaderboardModal();
+      };
+
       const activateFromOverlay = (event) => {
+        if (event.target.closest(".player-tag-btn") || event.target.closest(".start-leaderboard-btn")) return;
         if (event.type === "keydown" && event.key !== "Enter" && event.key !== " ") return;
         if (ui.start.classList.contains("has-error")) {
           window.location.reload();
           return;
         }
         audio?.unlockAndStart();
-        if (!hasSeenIntro) {
-          introController.show(loadedAssets);
+
+        const proceedToGame = () => {
+          if (!hasSeenIntro) {
+            introController.show(loadedAssets);
+          } else {
+            beginRound();
+          }
+        };
+
+        if (!leaderboardManager.hasPlayerName()) {
+          promptPlayerName(proceedToGame);
           return;
         }
-        beginRound();
+
+        proceedToGame();
       };
 
       ui.start.addEventListener("click", activateFromOverlay);
@@ -154,6 +212,25 @@ export function createGame({ mount, sdk, tweaks, assets }) {
       ui.soundButton.addEventListener("click", toggleSound);
       ui.pauseButton.addEventListener("click", togglePause);
       ui.resume.addEventListener("click", resume);
+
+      ui.playerTagBtn?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        promptPlayerName(() => {});
+      });
+      ui.playerTagBtn?.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.stopPropagation();
+          promptPlayerName(() => {});
+        }
+      });
+      ui.nameForm?.addEventListener("submit", handleNameSubmit);
+      ui.startLbBtn?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openLeaderboard(best);
+      });
+      ui.resultsLbBtn?.addEventListener("click", () => openLeaderboard(world.score));
+      ui.lbCloseBtn?.addEventListener("click", closeLeaderboard);
+      ui.lbCloseX?.addEventListener("click", closeLeaderboard);
 
       const handleHit = (result) => {
         audio?.smash(result.multiplier);
@@ -185,6 +262,9 @@ export function createGame({ mount, sdk, tweaks, assets }) {
         best = saved?.version === 3 && Number.isFinite(saved.best) ? Math.max(0, saved.best) : 0;
         muted = saved?.version === 3 && Boolean(saved.muted);
         hasSeenIntro = saved?.version === 3 && Boolean(saved.hasSeenIntro);
+        if (saved?.playerName) {
+          leaderboardManager.setPlayerName(saved.playerName);
+        }
         loadedAssets = assetSet;
         world.best = best;
         audio = managedAudio ? createArcadeAudio(managedAudio) : null;
@@ -193,6 +273,7 @@ export function createGame({ mount, sdk, tweaks, assets }) {
         readyToPlay = true;
         ui.setReady(best);
         ui.setSoundMuted(muted);
+        ui.setPlayerHandle(leaderboardManager.getPlayerName());
         // The surface was display:none while loading; size only after reveal.
         renderer.resize();
       }).catch(() => {
@@ -224,3 +305,4 @@ export function createGame({ mount, sdk, tweaks, assets }) {
     },
   };
 }
+

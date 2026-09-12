@@ -218,6 +218,35 @@ export function createUI(mount) {
     elements.loadingTip.textContent = randomTip;
   }
 
+  let verifiedDOMScore = "0";
+  let verifiedDOMBest = "0";
+  let isUpdatingDOM = false;
+
+  const scoreObserver = new MutationObserver(() => {
+    if (isUpdatingDOM) return;
+    if (elements.score && elements.score.textContent !== verifiedDOMScore) {
+      isUpdatingDOM = true;
+      elements.score.textContent = verifiedDOMScore;
+      isUpdatingDOM = false;
+    }
+  });
+
+  const bestObserver = new MutationObserver(() => {
+    if (isUpdatingDOM) return;
+    if (elements.best && elements.best.textContent !== verifiedDOMBest) {
+      isUpdatingDOM = true;
+      elements.best.textContent = verifiedDOMBest;
+      isUpdatingDOM = false;
+    }
+  });
+
+  if (elements.score) {
+    scoreObserver.observe(elements.score, { childList: true, characterData: true, subtree: true });
+  }
+  if (elements.best) {
+    bestObserver.observe(elements.best, { childList: true, characterData: true, subtree: true });
+  }
+
   let hintTimer = 0;
 
   return {
@@ -309,13 +338,18 @@ export function createUI(mount) {
     setReady(best) {
       elements.canvas.hidden = false;
       elements.hud.hidden = false;
-      elements.best.textContent = best;
-      elements.prompt.textContent = "Tap to start";
+      verifiedDOMBest = String(best);
+      elements.best.textContent = verifiedDOMBest;
+      if (elements.prompt) {
+        elements.prompt.textContent = "TAP TO SMASH";
+      }
       elements.start.classList.add("is-ready");
       elements.start.setAttribute("aria-disabled", "false");
     },
     setLoadError() {
-      elements.prompt.textContent = "Could not load • Tap to retry";
+      if (elements.prompt) {
+        elements.prompt.textContent = "Could not load • Tap to retry";
+      }
       elements.start.classList.add("has-error");
     },
     beginRound(duration) {
@@ -332,8 +366,13 @@ export function createUI(mount) {
       hintTimer = window.setTimeout(() => { elements.hint.hidden = true; }, 2600);
     },
     update(world) {
-      elements.score.textContent = world.score;
-      elements.best.textContent = Math.max(world.best, world.score);
+      isUpdatingDOM = true;
+      verifiedDOMScore = String(world.score);
+      verifiedDOMBest = String(Math.max(world.best, world.score));
+      elements.score.textContent = verifiedDOMScore;
+      elements.best.textContent = verifiedDOMBest;
+      isUpdatingDOM = false;
+
       elements.time.textContent = Math.ceil(world.timeLeft);
       elements.timerBadge.classList.toggle("urgent", world.timeLeft <= 10 && world.active);
       elements.timerBadge.classList.toggle("clock-frozen", world.freezeTimer > 0);
@@ -378,6 +417,8 @@ export function createUI(mount) {
       elements.results.hidden = false;
     },
     destroy() {
+      scoreObserver.disconnect();
+      bestObserver.disconnect();
       window.clearTimeout(hintTimer);
       mount.replaceChildren();
     },

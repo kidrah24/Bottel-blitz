@@ -86,8 +86,37 @@ function bottleData(frame) {
   return { frame, ...BOTTLE_TYPES[frame], kind: "regular", sheet: "regular" };
 }
 
+const SECRET_SALT = "BB_v1_S3cr3t_S@lt_2026";
+
+function computeHash(dataStr) {
+  const str = `${dataStr}_${SECRET_SALT}`;
+  let hash1 = 5381;
+  let hash2 = 0;
+  for (let i = 0; i < str.length; i += 1) {
+    const char = str.charCodeAt(i);
+    hash1 = (hash1 * 33) ^ char;
+    hash2 = (hash2 * 31) + char;
+  }
+  return (Math.abs(hash1) + Math.abs(hash2)).toString(36);
+}
+
+let _scoreVal = 0;
+let _scoreHash = computeHash("0");
+let _pendingAdd = 0;
+
+export function addVerifiedPoints(world, points) {
+  if (points > 0 && points <= 1000) {
+    _pendingAdd = points;
+    world.score = _scoreVal + points;
+  }
+}
+
 export function createWorld(config) {
-  return {
+  _scoreVal = 0;
+  _scoreHash = computeHash("0");
+  _pendingAdd = 0;
+
+  const world = {
     config,
     width: 1,
     height: 1,
@@ -97,7 +126,6 @@ export function createWorld(config) {
     elapsed: 0,
     idleTime: 0,
     timeLeft: config.roundDuration,
-    score: 0,
     best: 0,
     combo: 0,
     comboTimer: 0,
@@ -123,6 +151,34 @@ export function createWorld(config) {
     lastCallShown: false,
     onHit: null,
   };
+
+  Object.defineProperty(world, "score", {
+    get() {
+      if (computeHash(String(_scoreVal)) !== _scoreHash) {
+        console.warn("[Security] Direct memory score modification detected. Score reset.");
+        _scoreVal = 0;
+        _scoreHash = computeHash("0");
+      }
+      return _scoreVal;
+    },
+    set(val) {
+      if (val === 0) {
+        _scoreVal = 0;
+        _scoreHash = computeHash("0");
+        _pendingAdd = 0;
+      } else if (val === _scoreVal + _pendingAdd && _pendingAdd > 0) {
+        _scoreVal = val;
+        _scoreHash = computeHash(String(val));
+        _pendingAdd = 0;
+      } else {
+        console.warn("[Security] Unauthorized console score modification blocked.");
+      }
+    },
+    enumerable: true,
+    configurable: false,
+  });
+
+  return world;
 }
 
 export function setWorldSize(world, width, height) {
@@ -427,7 +483,7 @@ export function sliceSegment(world, a, b) {
   const totalStrokePoints = (stroke.baseTotal * multiplier + stroke.bonus) * stroke.scoreBoost;
   const pointsAdded = totalStrokePoints - stroke.awarded;
   stroke.awarded = totalStrokePoints;
-  world.score += pointsAdded;
+  addVerifiedPoints(world, pointsAdded);
   world.combo = multiplier;
   world.comboTimer = 0.85;
   world.maxCombo = Math.max(world.maxCombo, multiplier);

@@ -1,5 +1,19 @@
 const LOCAL_STORAGE_KEY = "bottle_blitz_leaderboard_v1";
 const PLAYER_NAME_KEY = "bottle_blitz_player_name";
+const SECRET_SALT = "BB_v1_S3cr3t_S@lt_2026";
+const MAX_ALLOWED_SCORE = 5000;
+
+export function computeHash(dataStr) {
+  const str = `${dataStr}_${SECRET_SALT}`;
+  let hash1 = 5381;
+  let hash2 = 0;
+  for (let i = 0; i < str.length; i += 1) {
+    const char = str.charCodeAt(i);
+    hash1 = (hash1 * 33) ^ char;
+    hash2 = (hash2 * 31) + char;
+  }
+  return (Math.abs(hash1) + Math.abs(hash2)).toString(36);
+}
 
 export class LeaderboardManager {
   constructor() {
@@ -40,7 +54,20 @@ export class LeaderboardManager {
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
-          return parsed.filter((entry) => entry && !entry.id?.startsWith("def-"));
+          return parsed.filter((entry) => {
+            if (!entry || typeof entry !== "object") return false;
+            if (entry.id?.startsWith("def-")) return false;
+            if (!Number.isFinite(entry.score) || entry.score <= 0 || entry.score > MAX_ALLOWED_SCORE) return false;
+            // Verify checksum signature if present
+            if (entry.sig) {
+              const expectedSig = computeHash(`${entry.id}:${entry.name}:${entry.score}`);
+              if (entry.sig !== expectedSig) {
+                console.warn("[Security] LocalStorage score tampering detected for ID:", entry.id);
+                return false;
+              }
+            }
+            return true;
+          });
         }
       }
     } catch {
@@ -59,15 +86,21 @@ export class LeaderboardManager {
 
   submitScore(score, customName = null) {
     const name = (customName || this.playerName || "Anonymous").trim().slice(0, 15);
-    if (!Number.isFinite(score) || score <= 0) return this.scores;
+    const rounded = Math.round(score);
+    if (!Number.isFinite(rounded) || rounded <= 0 || rounded > MAX_ALLOWED_SCORE) {
+      console.warn("[Security] Invalid score submission rejected:", score);
+      return this.scores;
+    }
 
     const today = new Date().toISOString().split("T")[0];
+    const newId = `score-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
     const newEntry = {
-      id: `score-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      id: newId,
       name,
-      score: Math.round(score),
+      score: rounded,
       date: today,
       isCurrentUser: true,
+      sig: computeHash(`${newId}:${name}:${rounded}`),
     };
 
     const existingIndex = this.scores.findIndex(
@@ -75,12 +108,15 @@ export class LeaderboardManager {
     );
 
     if (existingIndex >= 0) {
-      if (score > this.scores[existingIndex].score) {
+      if (rounded > this.scores[existingIndex].score) {
+        const existingId = this.scores[existingIndex].id || newId;
         this.scores[existingIndex] = {
           ...this.scores[existingIndex],
-          score: Math.round(score),
+          id: existingId,
+          score: rounded,
           date: today,
           isCurrentUser: true,
+          sig: computeHash(`${existingId}:${name}:${rounded}`),
         };
       }
     } else {
@@ -100,7 +136,7 @@ export class LeaderboardManager {
 
   getPlayerRank(score) {
     const all = [...this.scores];
-    if (score > 0 && !all.some((s) => s.isCurrentUser && s.score >= score)) {
+    if (score > 0 && score <= MAX_ALLOWED_SCORE && !all.some((s) => s.isCurrentUser && s.score >= score)) {
       all.push({ name: this.playerName || "YOU", score, isCurrentUser: true });
     }
     all.sort((a, b) => b.score - a.score);

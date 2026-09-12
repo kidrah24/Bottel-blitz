@@ -201,17 +201,20 @@ button,
 }
 
 @keyframes ice-pulse {
-  to { border-color: #62deef; background: rgba(8, 57, 78, .94); }
+  to {
+    border-color: #62deef;
+    background: rgba(8, 57, 78, .94);
+  }
 }
 
 @keyframes timer-pulse {
-  to { transform: scale(1.06); background: rgba(112, 24, 17, .9); }
+  to {
+    transform: scale(1.06);
+    background: rgba(112, 24, 17, .9);
+  }
 }
 
-#app .start-overlay,
-.intro-overlay,
-.pause-overlay,
-.results-overlay {
+.overlay {
   position: absolute;
   z-index: 7;
   inset: 0;
@@ -447,7 +450,10 @@ button,
 }
 
 @keyframes prompt-bob {
-  to { transform: translateY(-4px); border-color: #48e5e0; }
+  to {
+    transform: translateY(-4px);
+    border-color: #48e5e0;
+  }
 }
 
 .combo-toast,
@@ -504,7 +510,9 @@ button,
 }
 
 @keyframes combo-pop {
-  from { transform: translateX(-50%) scale(.72); }
+  from {
+    transform: translateX(-50%) scale(.72);
+  }
 }
 
 .milestone-toast {
@@ -528,9 +536,22 @@ button,
 }
 
 @keyframes hint-fade {
-  0%, 12% { opacity: 0; transform: translateX(-50%) translateY(8px); }
-  22%, 72% { opacity: 1; transform: translateX(-50%) translateY(0); }
-  100% { opacity: 0; }
+
+  0%,
+  12% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
+
+  22%,
+  72% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  100% {
+    opacity: 0;
+  }
 }
 
 .results-overlay {
@@ -700,8 +721,15 @@ button,
 }
 
 @keyframes modal-pop {
-  from { opacity: 0; transform: scale(.88); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(.88);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .name-title {
@@ -925,21 +953,31 @@ button,
 }
 
 @container (max-width: 460px) {
-  .best-badge { display: none; }
+  .best-badge {
+    display: none;
+  }
 }
 
 @container (max-width: 330px) {
-  .icon-btn { width: 42px; min-width: 42px; height: 42px; }
+  .icon-btn {
+    width: 42px;
+    min-width: 42px;
+    height: 42px;
+  }
 }
 
 @container (max-height: 340px) {
-  .intro-detail { display: none; }
+  .intro-detail {
+    display: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+
+  *,
+  *::before,
+  *::after {
     animation-duration: .01ms !important;
     animation-iteration-count: 1 !important;
   }
 }
-

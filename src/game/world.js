@@ -131,13 +131,13 @@ export function setWorldSize(world, width, height) {
 }
 
 export function prepareIdle(world) {
-  const size = clamp(78, Math.min(world.width, world.height) * 0.23, 126);
+  const size = clamp(68, Math.min(world.width, world.height) * 0.20, 112);
   world.active = false;
   world.ended = false;
   world.bottles = [
-    { x: world.width * 0.24, y: world.height * 0.58, size, angle: -0.18, ...bottleData(0), idlePhase: 0 },
-    { x: world.width * 0.52, y: world.height * 0.47, size: size * 1.06, angle: 0.12, ...POWER_TYPES.rainbow, idlePhase: 1.8 },
-    { x: world.width * 0.79, y: world.height * 0.63, size: size * 0.98, angle: 0.24, ...POWER_TYPES.frozen, idlePhase: 3.5 },
+    { x: world.width * 0.18, y: world.height * 0.75, size, angle: -0.18, ...bottleData(0), idlePhase: 0 },
+    { x: world.width * 0.50, y: world.height * 0.82, size: size * 1.04, angle: 0.12, ...POWER_TYPES.rainbow, idlePhase: 1.8 },
+    { x: world.width * 0.82, y: world.height * 0.75, size: size * 0.98, angle: 0.24, ...POWER_TYPES.frozen, idlePhase: 3.5 },
   ];
   world.bursts = [];
   world.shards = [];

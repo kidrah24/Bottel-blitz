@@ -71,12 +71,17 @@ export function createUI(mount) {
       </div>
     </div>
     <div class="start-overlay overlay" role="button" tabindex="0" aria-label="Start game">
-      <div class="start-stack">
+      <div class="start-card">
         <h1 class="start-title">BOTTLE<br><span>BLITZ</span></h1>
+        
         <div class="player-tag-btn" role="button" tabindex="0" title="Click to change handle">
           <span class="hud-icon">👤</span> <span data-player-handle>PLAYER</span> <span class="edit-icon">✎</span>
         </div>
-        <p class="start-prompt">Loading…</p>
+
+        <button class="primary-play-btn" type="button" aria-label="Start game">
+          <span class="start-prompt" data-start-prompt>Loading…</span>
+        </button>
+
         <div class="start-actions">
           <button class="control-btn start-guide-btn" type="button"><span class="control-label">📖 HOW TO PLAY</span></button>
           <button class="control-btn start-leaderboard-btn" type="button"><span class="control-label">🏆 LEADERBOARD</span></button>

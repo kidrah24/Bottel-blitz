@@ -146,6 +146,10 @@ export function createGame({ mount, sdk, tweaks, assets }) {
       const introController = createIntroController({ ui, onComplete: completeIntro });
 
       const promptPlayerName = (onSuccess) => {
+        if (leaderboardManager.hasPlayerName()) {
+          if (onSuccess) onSuccess();
+          return;
+        }
         pendingStartAction = onSuccess;
         ui.showNamePrompt(leaderboardManager.getPlayerName());
       };
@@ -159,7 +163,7 @@ export function createGame({ mount, sdk, tweaks, assets }) {
         }
         ui.nameError.hidden = true;
         leaderboardManager.setPlayerName(val);
-        ui.setPlayerHandle(val);
+        ui.setPlayerHandle(val, true);
         saveProgress();
         ui.hideNamePrompt();
         if (pendingStartAction) {
@@ -215,11 +219,13 @@ export function createGame({ mount, sdk, tweaks, assets }) {
 
       ui.playerTagBtn?.addEventListener("click", (e) => {
         e.stopPropagation();
+        if (leaderboardManager.hasPlayerName()) return;
         promptPlayerName(() => {});
       });
       ui.playerTagBtn?.addEventListener("keydown", (e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.stopPropagation();
+          if (leaderboardManager.hasPlayerName()) return;
           promptPlayerName(() => {});
         }
       });
@@ -273,7 +279,7 @@ export function createGame({ mount, sdk, tweaks, assets }) {
         readyToPlay = true;
         ui.setReady(best);
         ui.setSoundMuted(muted);
-        ui.setPlayerHandle(leaderboardManager.getPlayerName());
+        ui.setPlayerHandle(leaderboardManager.getPlayerName(), leaderboardManager.hasPlayerName());
         // The surface was display:none while loading; size only after reveal.
         renderer.resize();
       }).catch(() => {

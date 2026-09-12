@@ -147,9 +147,26 @@ export function createUI(mount) {
 
   return {
     ...elements,
-    setPlayerHandle(name) {
+    setPlayerHandle(name, isLocked = false) {
       if (elements.playerHandle) {
         elements.playerHandle.textContent = name || "SET NAME";
+      }
+      if (elements.playerTagBtn) {
+        const editIcon = elements.playerTagBtn.querySelector(".edit-icon");
+        const locked = isLocked || Boolean(name && name.trim().length >= 2);
+        if (locked) {
+          elements.playerTagBtn.classList.add("is-locked");
+          elements.playerTagBtn.title = `Player: ${name}`;
+          elements.playerTagBtn.setAttribute("tabindex", "-1");
+          elements.playerTagBtn.setAttribute("aria-disabled", "true");
+          if (editIcon) editIcon.hidden = true;
+        } else {
+          elements.playerTagBtn.classList.remove("is-locked");
+          elements.playerTagBtn.title = "Click to set handle";
+          elements.playerTagBtn.setAttribute("tabindex", "0");
+          elements.playerTagBtn.removeAttribute("aria-disabled");
+          if (editIcon) editIcon.hidden = false;
+        }
       }
     },
     showNamePrompt(currentName = "") {
@@ -165,25 +182,29 @@ export function createUI(mount) {
       elements.lbRank.textContent = playerRank ? `#${playerRank}` : "#--";
       elements.lbPlayer.textContent = playerName || "ANONYMOUS";
       
-      elements.lbList.innerHTML = scores.map((entry, index) => {
-        const rank = index + 1;
-        let medal = "";
-        let rankClass = "";
-        if (rank === 1) { medal = "🥇"; rankClass = "rank-1"; }
-        else if (rank === 2) { medal = "🥈"; rankClass = "rank-2"; }
-        else if (rank === 3) { medal = "🥉"; rankClass = "rank-3"; }
-        else { medal = `#${rank}`; }
+      if (!scores || scores.length === 0) {
+        elements.lbList.innerHTML = `<li class="lb-empty">No scores recorded yet.<br><small>Play a game to join the leaderboard!</small></li>`;
+      } else {
+        elements.lbList.innerHTML = scores.map((entry, index) => {
+          const rank = index + 1;
+          let medal = "";
+          let rankClass = "";
+          if (rank === 1) { medal = "🥇"; rankClass = "rank-1"; }
+          else if (rank === 2) { medal = "🥈"; rankClass = "rank-2"; }
+          else if (rank === 3) { medal = "🥉"; rankClass = "rank-3"; }
+          else { medal = `#${rank}`; }
 
-        const isUser = entry.isCurrentUser || (playerName && entry.name.toLowerCase() === playerName.toLowerCase());
+          const isUser = entry.isCurrentUser || (playerName && entry.name.toLowerCase() === playerName.toLowerCase());
 
-        return `
-          <li class="lb-item ${rankClass} ${isUser ? 'is-user' : ''}">
-            <span class="lb-rank">${medal}</span>
-            <span class="lb-name">${entry.name}${isUser ? ' <small>(YOU)</small>' : ''}</span>
-            <span class="lb-score">${entry.score.toLocaleString()} PTS</span>
-          </li>
-        `;
-      }).join("");
+          return `
+            <li class="lb-item ${rankClass} ${isUser ? 'is-user' : ''}">
+              <span class="lb-rank">${medal}</span>
+              <span class="lb-name">${entry.name}${isUser ? ' <small>(YOU)</small>' : ''}</span>
+              <span class="lb-score">${entry.score.toLocaleString()} PTS</span>
+            </li>
+          `;
+        }).join("");
+      }
 
       elements.lbOverlay.hidden = false;
     },

@@ -1,19 +1,6 @@
 const LOCAL_STORAGE_KEY = "bottle_blitz_leaderboard_v1";
 const PLAYER_NAME_KEY = "bottle_blitz_player_name";
 
-const DEFAULT_LEADERBOARD = [
-  { id: "def-1", name: "SmasherKing", score: 480, date: "2026-09-10" },
-  { id: "def-2", name: "ViperBlade", score: 410, date: "2026-09-11" },
-  { id: "def-3", name: "BottleNinja", score: 365, date: "2026-09-09" },
-  { id: "def-4", name: "GlassBreaker", score: 310, date: "2026-09-12" },
-  { id: "def-5", name: "BlitzQueen", score: 275, date: "2026-09-08" },
-  { id: "def-6", name: "CyberSwipe", score: 230, date: "2026-09-07" },
-  { id: "def-7", name: "NeonSlice", score: 195, date: "2026-09-06" },
-  { id: "def-8", name: "SpeedyJuice", score: 160, date: "2026-09-05" },
-  { id: "def-9", name: "ShardMaster", score: 125, date: "2026-09-04" },
-  { id: "def-10", name: "RookieRusher", score: 90, date: "2026-09-03" },
-];
-
 export class LeaderboardManager {
   constructor() {
     this.playerName = this.loadPlayerName();
@@ -52,14 +39,14 @@ export class LeaderboardManager {
       const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+        if (Array.isArray(parsed)) {
+          return parsed.filter((entry) => entry && !entry.id?.startsWith("def-"));
         }
       }
     } catch {
       // Fallback
     }
-    return [...DEFAULT_LEADERBOARD];
+    return [];
   }
 
   saveScores() {

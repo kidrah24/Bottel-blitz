@@ -672,6 +672,19 @@ button,
   transform: scale(1.04);
 }
 
+.player-tag-btn.is-locked {
+  cursor: default;
+  border-color: rgba(66, 227, 232, .35);
+  background: rgba(5, 32, 33, .75);
+}
+
+.player-tag-btn.is-locked:hover,
+.player-tag-btn.is-locked:focus-visible {
+  border-color: rgba(66, 227, 232, .35);
+  color: #51ece7;
+  transform: none;
+}
+
 .edit-icon {
   font-size: .88em;
   color: #ffc653;
@@ -886,6 +899,22 @@ button,
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.lb-empty {
+  text-align: center;
+  padding: 24px 12px;
+  color: #92e0db;
+  font-family: "Barlow Condensed", Inter, sans-serif;
+  font-size: clamp(15px, 4.2cqw, 19px);
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.lb-empty small {
+  color: #72c4bf;
+  font-size: .85em;
+  font-weight: 500;
 }
 
 .lb-item {

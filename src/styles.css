@@ -1187,6 +1187,18 @@ button,
   font-size: 14px;
 }
 
+.stat-pill.is-editable {
+  cursor: pointer;
+  transition: transform .12s ease, border-color .12s ease;
+}
+
+.stat-pill.is-editable:hover,
+.stat-pill.is-editable:focus-visible {
+  border-color: #ffd65c;
+  background: rgba(18, 48, 49, .95);
+  transform: scale(1.03);
+}
+
 .stat-label {
   color: #92e0db;
   font-weight: 700;

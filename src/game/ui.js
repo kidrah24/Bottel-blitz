@@ -145,7 +145,7 @@ export function createUI(mount) {
         </div>
         <div class="leaderboard-stats">
           <div class="stat-pill"><span class="stat-label">YOUR RANK</span> <strong data-lb-rank>#--</strong></div>
-          <div class="stat-pill"><span class="stat-label">PLAYER</span> <strong data-lb-player>--</strong></div>
+          <div class="stat-pill is-editable" data-lb-player-pill title="Click to change name" role="button" tabindex="0"><span class="stat-label">PLAYER</span> <strong data-lb-player>--</strong> <span class="edit-icon">✎</span></div>
         </div>
         <div class="leaderboard-scroll">
           <ul class="leaderboard-list" data-lb-list></ul>
@@ -207,6 +207,7 @@ export function createUI(mount) {
     lbOverlay: shell.querySelector(".leaderboard-overlay"),
     lbRank: shell.querySelector("[data-lb-rank]"),
     lbPlayer: shell.querySelector("[data-lb-player]"),
+    lbPlayerPill: shell.querySelector("[data-lb-player-pill]"),
     lbList: shell.querySelector("[data-lb-list]"),
     lbCloseBtn: shell.querySelector(".leaderboard-close-btn"),
     lbCloseX: shell.querySelector(".leaderboard-close-x"),
@@ -270,26 +271,17 @@ export function createUI(mount) {
         }, 400);
       }
     },
-    setPlayerHandle(name, isLocked = false) {
+    setPlayerHandle(name) {
       if (elements.playerHandle) {
         elements.playerHandle.textContent = name || "SET NAME";
       }
       if (elements.playerTagBtn) {
         const editIcon = elements.playerTagBtn.querySelector(".edit-icon");
-        const locked = isLocked || Boolean(name && name.trim().length >= 2);
-        if (locked) {
-          elements.playerTagBtn.classList.add("is-locked");
-          elements.playerTagBtn.title = `Player: ${name}`;
-          elements.playerTagBtn.setAttribute("tabindex", "-1");
-          elements.playerTagBtn.setAttribute("aria-disabled", "true");
-          if (editIcon) editIcon.hidden = true;
-        } else {
-          elements.playerTagBtn.classList.remove("is-locked");
-          elements.playerTagBtn.title = "Click to set handle";
-          elements.playerTagBtn.setAttribute("tabindex", "0");
-          elements.playerTagBtn.removeAttribute("aria-disabled");
-          if (editIcon) editIcon.hidden = false;
-        }
+        elements.playerTagBtn.classList.remove("is-locked");
+        elements.playerTagBtn.title = name ? `Player: ${name} (Click to change)` : "Click to set handle";
+        elements.playerTagBtn.setAttribute("tabindex", "0");
+        elements.playerTagBtn.removeAttribute("aria-disabled");
+        if (editIcon) editIcon.hidden = false;
       }
     },
     showNamePrompt(currentName = "") {

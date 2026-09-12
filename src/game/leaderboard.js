@@ -31,12 +31,32 @@ export class LeaderboardManager {
 
   setPlayerName(name) {
     const trimmed = (name || "").trim().slice(0, 15);
+    const oldName = this.playerName;
     this.playerName = trimmed;
     try {
       localStorage.setItem(PLAYER_NAME_KEY, trimmed);
     } catch {
       // Storage unavailable
     }
+
+    if (trimmed) {
+      let updated = false;
+      this.scores.forEach((entry) => {
+        const isMatch = entry.isCurrentUser || (oldName && entry.name.toLowerCase() === oldName.toLowerCase());
+        if (isMatch) {
+          entry.name = trimmed;
+          entry.isCurrentUser = true;
+          entry.sig = computeHash(`${entry.id}:${trimmed}:${entry.score}`);
+          updated = true;
+        } else {
+          entry.isCurrentUser = false;
+        }
+      });
+      if (updated) {
+        this.saveScores();
+      }
+    }
+
     return trimmed;
   }
 
@@ -67,7 +87,12 @@ export class LeaderboardManager {
               }
             }
             return true;
-          });
+          }).map((entry) => ({
+            ...entry,
+            isCurrentUser: Boolean(
+              entry.isCurrentUser || (this.playerName && entry.name.toLowerCase() === this.playerName.toLowerCase())
+            ),
+          }));
         }
       }
     } catch {
@@ -94,32 +119,38 @@ export class LeaderboardManager {
 
     const today = new Date().toISOString().split("T")[0];
     const newId = `score-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
-    const newEntry = {
-      id: newId,
-      name,
-      score: rounded,
-      date: today,
-      isCurrentUser: true,
-      sig: computeHash(`${newId}:${name}:${rounded}`),
-    };
+
+    this.scores.forEach((entry) => {
+      if (entry.name.toLowerCase() !== name.toLowerCase()) {
+        entry.isCurrentUser = false;
+      }
+    });
 
     const existingIndex = this.scores.findIndex(
-      (entry) => entry.name.toLowerCase() === name.toLowerCase(),
+      (entry) => entry.isCurrentUser || entry.name.toLowerCase() === name.toLowerCase(),
     );
 
     if (existingIndex >= 0) {
-      if (rounded > this.scores[existingIndex].score) {
-        const existingId = this.scores[existingIndex].id || newId;
-        this.scores[existingIndex] = {
-          ...this.scores[existingIndex],
-          id: existingId,
-          score: rounded,
-          date: today,
-          isCurrentUser: true,
-          sig: computeHash(`${existingId}:${name}:${rounded}`),
-        };
-      }
+      const existingId = this.scores[existingIndex].id || newId;
+      const targetScore = Math.max(rounded, this.scores[existingIndex].score);
+      this.scores[existingIndex] = {
+        ...this.scores[existingIndex],
+        id: existingId,
+        name,
+        score: targetScore,
+        date: today,
+        isCurrentUser: true,
+        sig: computeHash(`${existingId}:${name}:${targetScore}`),
+      };
     } else {
+      const newEntry = {
+        id: newId,
+        name,
+        score: rounded,
+        date: today,
+        isCurrentUser: true,
+        sig: computeHash(`${newId}:${name}:${rounded}`),
+      };
       this.scores.push(newEntry);
     }
 

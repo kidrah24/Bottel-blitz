@@ -155,8 +155,8 @@ export function createGame({ mount, sdk, tweaks, assets }) {
         introController.show(loadedAssets, true);
       };
 
-      const promptPlayerName = (onSuccess) => {
-        if (leaderboardManager.hasPlayerName()) {
+      const promptPlayerName = (onSuccess, forcePrompt = false) => {
+        if (!forcePrompt && leaderboardManager.hasPlayerName()) {
           if (onSuccess) onSuccess();
           return;
         }
@@ -173,9 +173,16 @@ export function createGame({ mount, sdk, tweaks, assets }) {
         }
         ui.nameError.hidden = true;
         leaderboardManager.setPlayerName(val);
-        ui.setPlayerHandle(val, true);
+        ui.setPlayerHandle(val);
+        if (best > 0) {
+          leaderboardManager.submitScore(best);
+          void sdk.leaderboard.submit(best).catch(() => {});
+        }
         saveProgress();
         ui.hideNamePrompt();
+        if (!ui.lbOverlay.hidden) {
+          openLeaderboard(world.active ? world.score : best);
+        }
         if (pendingStartAction) {
           const action = pendingStartAction;
           pendingStartAction = null;
@@ -241,14 +248,22 @@ export function createGame({ mount, sdk, tweaks, assets }) {
       });
       ui.playerTagBtn?.addEventListener("click", (e) => {
         e.stopPropagation();
-        if (leaderboardManager.hasPlayerName()) return;
-        promptPlayerName(() => {});
+        promptPlayerName(() => {}, true);
       });
       ui.playerTagBtn?.addEventListener("keydown", (e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.stopPropagation();
-          if (leaderboardManager.hasPlayerName()) return;
-          promptPlayerName(() => {});
+          promptPlayerName(() => {}, true);
+        }
+      });
+      ui.lbPlayerPill?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        promptPlayerName(() => {}, true);
+      });
+      ui.lbPlayerPill?.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.stopPropagation();
+          promptPlayerName(() => {}, true);
         }
       });
       ui.nameForm?.addEventListener("submit", handleNameSubmit);

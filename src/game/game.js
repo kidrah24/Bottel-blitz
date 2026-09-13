@@ -324,6 +324,10 @@ export function createGame({ mount, sdk, tweaks, assets }) {
         if (saved?.playerName) {
           leaderboardManager.setPlayerName(saved.playerName);
         }
+        const activeHandle = leaderboardManager.getPlayerName();
+        if (best > 0 && activeHandle) {
+          leaderboardManager.submitGlobalScore(best, activeHandle).catch(() => {});
+        }
         loadedAssets = assetSet;
         world.best = best;
         audio = managedAudio ? createArcadeAudio(managedAudio) : null;

@@ -174,6 +174,17 @@ export class LeaderboardManager {
 
   async fetchGlobalScores() {
     try {
+      // Sync local user score to global database if available
+      const activeName = (this.playerName || "").trim();
+      if (activeName) {
+        const localEntry = this.scores.find(
+          (s) => s.name && s.name.toLowerCase() === activeName.toLowerCase()
+        );
+        if (localEntry && localEntry.score > 0) {
+          await this.submitGlobalScore(localEntry.score, activeName);
+        }
+      }
+
       const res = await fetch("./api/leaderboard", {
         headers: { Accept: "application/json" },
       });

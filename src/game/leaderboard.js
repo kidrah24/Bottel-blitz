@@ -172,6 +172,85 @@ export class LeaderboardManager {
     return this.scores;
   }
 
+  async fetchGlobalScores() {
+    try {
+      const res = await fetch("./api/leaderboard", {
+        headers: { Accept: "application/json" },
+      });
+      if (!res.ok) return this.scores;
+      const data = await res.json();
+      if (data && data.success && Array.isArray(data.scores)) {
+        this.mergeGlobalScores(data.scores);
+      }
+    } catch {
+      // Network/offline fallback
+    }
+    return this.scores;
+  }
+
+  async submitGlobalScore(score, customName = null) {
+    const name = (customName || this.playerName || "Anonymous").trim().slice(0, 15);
+    const rounded = Math.round(score);
+    if (!Number.isFinite(rounded) || rounded <= 0 || rounded > MAX_ALLOWED_SCORE) {
+      return this.scores;
+    }
+
+    // Update local state immediately
+    this.submitScore(rounded, name);
+
+    try {
+      const res = await fetch("./api/leaderboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ name, score: rounded }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.success && Array.isArray(data.scores)) {
+          this.mergeGlobalScores(data.scores);
+        }
+      }
+    } catch {
+      // Offline fallback
+    }
+    return this.scores;
+  }
+
+  mergeGlobalScores(remoteScores) {
+    const activeName = (this.playerName || "").toLowerCase();
+    const scoreMap = new Map();
+
+    // Fill with current local scores first
+    this.scores.forEach((entry) => {
+      scoreMap.set(entry.name.toLowerCase(), { ...entry });
+    });
+
+    // Merge remote scores (taking higher score per name)
+    remoteScores.forEach((entry) => {
+      if (!entry || !entry.name || !Number.isFinite(entry.score)) return;
+      const key = entry.name.toLowerCase();
+      const existing = scoreMap.get(key);
+      if (!existing || entry.score >= existing.score) {
+        scoreMap.set(key, {
+          id: entry.id || `global-${key}`,
+          name: entry.name,
+          score: entry.score,
+          date: entry.date || new Date().toISOString().split("T")[0],
+          sig: computeHash(`${entry.id || key}:${entry.name}:${entry.score}`),
+        });
+      }
+    });
+
+    const merged = Array.from(scoreMap.values());
+    merged.sort((a, b) => b.score - a.score);
+    this.scores = merged.slice(0, 50).map((entry) => ({
+      ...entry,
+      isCurrentUser: Boolean(activeName && entry.name.toLowerCase() === activeName),
+    }));
+
+    this.saveScores();
+  }
+
   getTopScores(limit = 20) {
     return this.scores.slice(0, limit);
   }
@@ -191,3 +270,4 @@ export class LeaderboardManager {
 }
 
 export const leaderboardManager = new LeaderboardManager();
+

@@ -71,7 +71,7 @@ export function createGame({ mount, sdk, tweaks, assets }) {
         ui.showResults(world.score, best);
         const score = finiteScore(world.score);
         if (score !== null) {
-          leaderboardManager.submitScore(score);
+          leaderboardManager.submitGlobalScore(score);
           void sdk.leaderboard.submit(score).catch(() => {});
         }
         saveProgress();
@@ -175,7 +175,7 @@ export function createGame({ mount, sdk, tweaks, assets }) {
         leaderboardManager.setPlayerName(val);
         ui.setPlayerHandle(val);
         if (best > 0) {
-          leaderboardManager.submitScore(best);
+          leaderboardManager.submitGlobalScore(best);
           void sdk.leaderboard.submit(best).catch(() => {});
         }
         saveProgress();
@@ -196,7 +196,17 @@ export function createGame({ mount, sdk, tweaks, assets }) {
         const playerRank = leaderboardManager.getPlayerRank(scoreContext);
         const name = leaderboardManager.getPlayerName();
         ui.showLeaderboardModal(topScores, playerRank, name);
+
+        // Fetch latest online scores from global backend
+        leaderboardManager.fetchGlobalScores().then(() => {
+          if (!ui.lbOverlay.hidden) {
+            const freshTop = leaderboardManager.getTopScores();
+            const freshRank = leaderboardManager.getPlayerRank(scoreContext);
+            ui.showLeaderboardModal(freshTop, freshRank, leaderboardManager.getPlayerName());
+          }
+        }).catch(() => {});
       };
+
 
       const closeLeaderboard = () => {
         ui.hideLeaderboardModal();
@@ -305,6 +315,7 @@ export function createGame({ mount, sdk, tweaks, assets }) {
         }),
         sdk.gameState.load().catch(() => null),
         sdk.audio.getContext().catch(() => null),
+        leaderboardManager.fetchGlobalScores().catch(() => null),
       ]).then(([assetSet, saved, managedAudio]) => {
         if (destroyed) return;
         best = saved?.version === 3 && Number.isFinite(saved.best) ? Math.max(0, saved.best) : 0;

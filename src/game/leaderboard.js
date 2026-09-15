@@ -25,6 +25,46 @@ export function computeHash(dataStr) {
   return (Math.abs(hash1) + Math.abs(hash2)).toString(36);
 }
 
+function getCookie(name) {
+  try {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(";").shift();
+  } catch {
+    // Cookie unavailable
+  }
+  return "";
+}
+
+function setCookie(name, value) {
+  try {
+    document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=31536000; SameSite=Lax`;
+  } catch {
+    // Cookie unavailable
+  }
+}
+
+function generateDeviceHandle() {
+  try {
+    const screenStr = typeof window !== "undefined" && window.screen
+      ? `${window.screen.width}x${window.screen.height}`
+      : "screen";
+    const navStr = typeof navigator !== "undefined"
+      ? `${navigator.userAgent}_${navigator.language}`
+      : "navigator";
+    const seedStr = `${screenStr}_${navStr}`;
+    let hash = 0;
+    for (let i = 0; i < seedStr.length; i += 1) {
+      hash = (hash * 31 + seedStr.charCodeAt(i)) & 0xffffffff;
+    }
+    const num = (Math.abs(hash) % 8999) + 1000;
+    return `Player_${num}`;
+  } catch {
+    const randomNum = Math.floor(1000 + Math.random() * 9000);
+    return `Player_${randomNum}`;
+  }
+}
+
 export class LeaderboardManager {
   constructor() {
     this.playerName = this.loadPlayerName();
@@ -32,21 +72,54 @@ export class LeaderboardManager {
   }
 
   loadPlayerName() {
+    // 1. Check URL query parameters (?player=..., ?name=..., ?username=...)
     try {
-      return localStorage.getItem(PLAYER_NAME_KEY) || "";
-    } catch {
-      return "";
+      if (typeof window !== "undefined" && window.location && window.location.search) {
+        const params = new URLSearchParams(window.location.search);
+        const urlName = params.get("player") || params.get("name") || params.get("username") || params.get("handle") || params.get("user");
+        if (urlName && urlName.trim().length >= 2) {
+          const sanitized = urlName.trim().slice(0, 15);
+          this.setPlayerName(sanitized);
+          return sanitized;
+        }
+      }
+    } catch (err) { void err; }
+
+    // 2. Check LocalStorage
+    try {
+      const stored = localStorage.getItem(PLAYER_NAME_KEY);
+      if (stored && stored.trim().length >= 2) {
+        return stored.trim().slice(0, 15);
+      }
+    } catch (err) { void err; }
+
+    // 3. Check Cookie
+    const cookieName = getCookie(PLAYER_NAME_KEY);
+    if (cookieName && cookieName.trim().length >= 2) {
+      const decoded = decodeURIComponent(cookieName).trim().slice(0, 15);
+      try {
+        localStorage.setItem(PLAYER_NAME_KEY, decoded);
+      } catch (err) { void err; }
+      return decoded;
     }
+
+    // 4. Fallback to deterministic device-seeded handle
+    const deviceName = generateDeviceHandle();
+    try {
+      localStorage.setItem(PLAYER_NAME_KEY, deviceName);
+    } catch (err) { void err; }
+    setCookie(PLAYER_NAME_KEY, deviceName);
+    return deviceName;
   }
 
   setPlayerName(name) {
     const trimmed = (name || "").trim().slice(0, 15);
+    if (!trimmed || trimmed.length < 2) return this.playerName;
     this.playerName = trimmed;
     try {
       localStorage.setItem(PLAYER_NAME_KEY, trimmed);
-    } catch {
-      // Storage unavailable
-    }
+    } catch (err) { void err; }
+    setCookie(PLAYER_NAME_KEY, trimmed);
     this.updateCurrentUserFlags();
     this.saveScores();
     return trimmed;

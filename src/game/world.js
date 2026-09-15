@@ -64,7 +64,20 @@ function segmentToSegmentDistanceSquared(a, b, c, d) {
   );
 }
 
-function bottleTouchesSegment(bottle, a, b) {
+function isBottleOnScreen(bottle, world) {
+  if (!world || !world.width || !world.height) return true;
+  const margin = bottle.size * 0.15;
+  return (
+    bottle.x + margin >= 0 &&
+    bottle.x - margin <= world.width &&
+    bottle.y + margin >= 0 &&
+    bottle.y - margin <= world.height
+  );
+}
+
+function bottleTouchesSegment(bottle, a, b, world) {
+  if (world && !isBottleOnScreen(bottle, world)) return false;
+
   const halfHeight = bottle.size * 0.46;
   const halfWidth = bottle.size * 0.24;
   const slashRadius = Math.max(14, bottle.size * 0.12);
@@ -466,7 +479,7 @@ function addBottleBreak(world, bottle) {
 export function sliceSegment(world, a, b) {
   if (!world.active || world.paused) return { hits: [], multiplier: 1, pointsAdded: 0, powers: [] };
   if (!world.activeStroke) beginSliceStroke(world);
-  const hits = world.bottles.filter((bottle) => bottleTouchesSegment(bottle, a, b));
+  const hits = world.bottles.filter((bottle) => bottleTouchesSegment(bottle, a, b, world));
   if (!hits.length) return { hits, multiplier: world.activeStroke.count || 1, pointsAdded: 0 };
 
   const hitSet = new Set(hits);
@@ -507,7 +520,7 @@ export function sliceSegment(world, a, b) {
       world.milestoneTimer = 1.5;
     } else if (bottle.kind === "shockwave") {
       powers.push("shockwave");
-      const victims = world.bottles.filter((candidate) => candidate.kind === "regular");
+      const victims = world.bottles.filter((candidate) => candidate.kind === "regular" && isBottleOnScreen(candidate, world));
       const victimSet = new Set(victims);
       world.bottles = world.bottles.filter((candidate) => !victimSet.has(candidate));
       for (const victim of victims) {

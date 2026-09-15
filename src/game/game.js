@@ -285,14 +285,42 @@ export function createGame({ mount, sdk, tweaks, assets }) {
       ui.lbCloseBtn?.addEventListener("click", closeLeaderboard);
       ui.lbCloseX?.addEventListener("click", closeLeaderboard);
 
+      const triggerHaptic = (pattern, force = false) => {
+        const now = performance.now();
+        if (!force && now - lastHaptic < 40) return;
+        lastHaptic = now;
+
+        let triggered = false;
+        try {
+          if (sdk?.device?.haptics?.isSupported && sdk.device.haptics.isSupported()) {
+            void sdk.device.haptics.vibrate(pattern).catch(() => {});
+            triggered = true;
+          }
+        } catch {
+          // SDK fallback
+        }
+
+        if (!triggered && typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+          try {
+            navigator.vibrate(pattern);
+          } catch {
+            // Browser fallback error
+          }
+        }
+      };
+
       const handleHit = (result) => {
         audio?.smash(result.multiplier);
         result.powers.forEach((power) => audio?.power(power));
-        const now = performance.now();
-        if (now - lastHaptic > 55 && sdk.device.haptics.isSupported()) {
-          lastHaptic = now;
-          void sdk.device.haptics.vibrate(result.multiplier > 1 ? [18, 24, 18] : 18).catch(() => {});
+
+        let pattern = 25;
+        if (result.powers && result.powers.length > 0) {
+          pattern = [35, 30, 45];
+        } else if (result.multiplier > 1) {
+          pattern = [22, 28, 22];
         }
+
+        triggerHaptic(pattern);
       };
 
       world.onHit = handleHit;

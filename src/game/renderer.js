@@ -175,9 +175,10 @@ function drawBurst(ctx, assetSet, burst) {
 
 function drawScorePopup(ctx, popup, world) {
   const alpha = Math.max(0, 1 - popup.age / 0.75);
-  const lift = popup.age * 58;
-  const baseSize = Math.min(world.width, world.height) * (popup.multiplier > 1 ? 0.065 : 0.052);
-  const size = Math.max(16, Math.min(34, baseSize));
+  const minDim = Math.min(world.width, world.height);
+  const lift = popup.age * minDim * 0.09;
+  const baseSize = minDim * (popup.multiplier > 1 ? 0.065 : 0.052);
+  const size = Math.max(14, Math.min(minDim * 0.095, baseSize));
   const text = popup.multiplier > 1
     ? `+${popup.points}  x${popup.multiplier}`
     : `+${popup.points}`;
@@ -187,20 +188,22 @@ function drawScorePopup(ctx, popup, world) {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.strokeStyle = "#092628";
-  ctx.lineWidth = 6;
+  ctx.lineWidth = Math.max(3, size * 0.22);
   ctx.fillStyle = popup.multiplier > 1 ? "#43eee7" : "#fff1a6";
-  ctx.strokeText(text, popup.x, popup.y - 44 - lift);
-  ctx.fillText(text, popup.x, popup.y - 44 - lift);
+  ctx.strokeText(text, popup.x, popup.y - minDim * 0.06 - lift);
+  ctx.fillText(text, popup.x, popup.y - minDim * 0.06 - lift);
   ctx.restore();
 }
 
 function drawTrail(ctx, world) {
   if (world.trail.length < 2) return;
   const now = world.idleTime;
+  const minDim = Math.min(world.width, world.height);
+  const trailScale = Math.max(0.6, Math.min(2.5, minDim / 480));
   const layers = [
-    { width: 18, color: "rgba(54, 226, 255, .18)" },
-    { width: 8, color: "rgba(68, 232, 255, .72)" },
-    { width: 2.5, color: "rgba(255, 255, 235, .98)" },
+    { width: 18 * trailScale, color: "rgba(54, 226, 255, .18)" },
+    { width: 8 * trailScale, color: "rgba(68, 232, 255, .72)" },
+    { width: 2.5 * trailScale, color: "rgba(255, 255, 235, .98)" },
   ];
   for (const layer of layers) {
     ctx.beginPath();

@@ -418,10 +418,16 @@ export function createGame({ mount, sdk, tweaks, assets }) {
         }
       };
 
+      const handleResize = () => {
+        renderer.resize();
+      };
+
       document.addEventListener("visibilitychange", handleVisibilityChange);
       window.addEventListener("blur", handleWindowBlur);
       window.addEventListener("focus", handleWindowFocus);
       window.addEventListener("pagehide", handleVisibilityChange);
+      window.addEventListener("resize", handleResize);
+      window.addEventListener("orientationchange", handleResize);
 
       animationFrame = requestAnimationFrame(loop);
 
@@ -432,6 +438,8 @@ export function createGame({ mount, sdk, tweaks, assets }) {
         window.removeEventListener("blur", handleWindowBlur);
         window.removeEventListener("focus", handleWindowFocus);
         window.removeEventListener("pagehide", handleVisibilityChange);
+        window.removeEventListener("resize", handleResize);
+        window.removeEventListener("orientationchange", handleResize);
         audio?.stop();
         inputCleanup();
         renderer.destroy();

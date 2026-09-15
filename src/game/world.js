@@ -182,12 +182,54 @@ export function createWorld(config) {
 }
 
 export function setWorldSize(world, width, height) {
+  if (world.width > 1 && world.height > 1 && (world.width !== width || world.height !== height)) {
+    const scaleX = width / world.width;
+    const scaleY = height / world.height;
+    const scaleMin = Math.min(scaleX, scaleY);
+
+    if (world.bottles) {
+      for (const b of world.bottles) {
+        b.x *= scaleX;
+        b.y *= scaleY;
+        if (b.vx !== undefined) b.vx *= scaleX;
+        if (b.vy !== undefined) b.vy *= scaleY;
+        if (b.size !== undefined) b.size *= scaleMin;
+      }
+    }
+    if (world.shards) {
+      for (const s of world.shards) {
+        s.x *= scaleX;
+        s.y *= scaleY;
+        if (s.vx !== undefined) s.vx *= scaleX;
+        if (s.vy !== undefined) s.vy *= scaleY;
+        if (s.size !== undefined) s.size *= scaleMin;
+      }
+    }
+    if (world.bursts) {
+      for (const bu of world.bursts) {
+        bu.x *= scaleX;
+        bu.y *= scaleY;
+        if (bu.size !== undefined) bu.size *= scaleMin;
+      }
+    }
+    if (world.trail) {
+      for (const t of world.trail) {
+        t.x *= scaleX;
+        t.y *= scaleY;
+      }
+    }
+    if (world.shockwaveX !== undefined) {
+      world.shockwaveX *= scaleX;
+      world.shockwaveY *= scaleY;
+    }
+  }
   world.width = width;
   world.height = height;
 }
 
 export function prepareIdle(world) {
-  const size = clamp(68, Math.min(world.width, world.height) * 0.20, 112);
+  const minDim = Math.min(world.width, world.height);
+  const size = clamp(52, minDim * 0.20, minDim * 0.32);
   world.active = false;
   world.ended = false;
   world.bottles = [
@@ -233,7 +275,8 @@ export function resetRound(world, best) {
 function spawnBottle(world, originOverride, allowPower = true) {
   const origins = world.frenzyTimer > 0 ? ["left", "right", "top"] : ["left", "right"];
   const origin = originOverride ?? origins[Math.floor(Math.random() * origins.length)];
-  const size = clamp(76, Math.min(world.width, world.height) * random(0.205, 0.245), 126);
+  const minDim = Math.min(world.width, world.height);
+  const size = clamp(52, minDim * random(0.18, 0.23), minDim * 0.32);
   const frame = Math.floor(Math.random() * BOTTLE_TYPES.length);
   let type = bottleData(frame);
   if (allowPower && world.elapsed > 6 && world.powerCooldown <= 0 && Math.random() < 0.07) {

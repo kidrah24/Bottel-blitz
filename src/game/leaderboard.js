@@ -65,18 +65,39 @@ function generateDeviceHandle() {
   }
 }
 
+const DREAMLO_PUBLIC_KEY = "6aa67aaa8f40bb15a879a651";
+const DREAMLO_PRIVATE_KEY = "fNj18yEImEWEw2cXfmdoLQROnPmX7pN0WHj4Nrlk-NWw";
+
 export class LeaderboardManager {
   constructor() {
     this.playerName = this.loadPlayerName();
     this.scores = this.loadScores();
+    this.initParentListener();
+  }
+
+  initParentListener() {
+    if (typeof window !== "undefined") {
+      window.addEventListener("message", (event) => {
+        try {
+          const data = event.data;
+          if (!data) return;
+          const remoteName = data.playerName || data.username || data.name || data.handle || data.user?.name || data.user?.username;
+          if (remoteName && typeof remoteName === "string" && remoteName.trim().length >= 2) {
+            this.setPlayerName(remoteName.trim().slice(0, 15));
+          }
+        } catch {
+          // Ignore invalid cross-origin messages
+        }
+      });
+    }
   }
 
   loadPlayerName() {
-    // 1. Check URL query parameters (?player=..., ?name=..., ?username=...)
+    // 1. Check URL query parameters (?player=..., ?name=..., ?username=..., ?handle=..., ?user=..., ?user_id=..., ?displayName=..., ?nickname=...)
     try {
       if (typeof window !== "undefined" && window.location && window.location.search) {
         const params = new URLSearchParams(window.location.search);
-        const urlName = params.get("player") || params.get("name") || params.get("username") || params.get("handle") || params.get("user");
+        const urlName = params.get("player") || params.get("name") || params.get("username") || params.get("handle") || params.get("user") || params.get("user_id") || params.get("displayName") || params.get("nickname");
         if (urlName && urlName.trim().length >= 2) {
           const sanitized = urlName.trim().slice(0, 15);
           this.setPlayerName(sanitized);
@@ -241,29 +262,64 @@ export class LeaderboardManager {
   }
 
   async fetchGlobalScores() {
-    try {
-      // Sync local user score to global database if available
-      const activeName = (this.playerName || "").trim();
-      if (activeName) {
-        const localEntry = this.scores.find(
-          (s) => s.name && s.name.toLowerCase() === activeName.toLowerCase()
-        );
-        if (localEntry && localEntry.score > 0) {
-          await this.submitGlobalScore(localEntry.score, activeName);
-        }
+    const activeName = (this.playerName || "").trim();
+    if (activeName) {
+      const localEntry = this.scores.find(
+        (s) => s.name && s.name.toLowerCase() === activeName.toLowerCase()
+      );
+      if (localEntry && localEntry.score > 0) {
+        await this.submitGlobalScore(localEntry.score, activeName);
       }
+    }
 
+    let fetchedScores = null;
+
+    // 1. Try local serverless endpoint ./api/leaderboard first
+    try {
       const res = await fetch("./api/leaderboard", {
         headers: { Accept: "application/json" },
       });
-      if (!res.ok) return this.scores;
-      const data = await res.json();
-      if (data && data.success && Array.isArray(data.scores)) {
-        this.mergeGlobalScores(data.scores);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.success && Array.isArray(data.scores)) {
+          fetchedScores = data.scores;
+        }
       }
     } catch {
-      // Network/offline fallback
+      // API endpoint unreachable
     }
+
+    // 2. Direct fallback to Dreamlo global cloud backend if ./api/leaderboard failed / returned 404
+    if (!fetchedScores) {
+      try {
+        const dreamloRes = await fetch(`https://dreamlo.com/lb/${DREAMLO_PUBLIC_KEY}/json`, {
+          headers: { Accept: "application/json" },
+        });
+        if (dreamloRes.ok) {
+          const data = await dreamloRes.json();
+          const rawEntries = data?.dreamlo?.leaderboard?.entry;
+          let entries = [];
+          if (Array.isArray(rawEntries)) {
+            entries = rawEntries;
+          } else if (rawEntries && typeof rawEntries === "object") {
+            entries = [rawEntries];
+          }
+          fetchedScores = entries.map((item) => ({
+            id: `dreamlo-${item.name}`,
+            name: (item.name || "").trim(),
+            score: parseInt(item.score, 10) || 0,
+            date: item.date || new Date().toISOString().split("T")[0],
+          })).filter((e) => e.name && e.score > 0 && e.score <= MAX_ALLOWED_SCORE);
+        }
+      } catch {
+        // Offline fallback
+      }
+    }
+
+    if (fetchedScores && Array.isArray(fetchedScores)) {
+      this.mergeGlobalScores(fetchedScores);
+    }
+
     return this.scores;
   }
 
@@ -277,6 +333,9 @@ export class LeaderboardManager {
     // Update local state immediately
     this.submitScore(rounded, name);
 
+    let success = false;
+
+    // 1. Try local serverless endpoint ./api/leaderboard first
     try {
       const res = await fetch("./api/leaderboard", {
         method: "POST",
@@ -287,11 +346,42 @@ export class LeaderboardManager {
         const data = await res.json();
         if (data && data.success && Array.isArray(data.scores)) {
           this.mergeGlobalScores(data.scores);
+          success = true;
         }
       }
     } catch {
-      // Offline fallback
+      // API endpoint unreachable
     }
+
+    // 2. Direct fallback to Dreamlo global cloud backend if ./api/leaderboard failed / returned 404
+    if (!success) {
+      try {
+        const sanitizedName = encodeURIComponent(name);
+        const url = `https://dreamlo.com/lb/${DREAMLO_PRIVATE_KEY}/add-json/${sanitizedName}/${rounded}`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          const rawEntries = data?.dreamlo?.leaderboard?.entry;
+          let entries = [];
+          if (Array.isArray(rawEntries)) {
+            entries = rawEntries;
+          } else if (rawEntries && typeof rawEntries === "object") {
+            entries = [rawEntries];
+          }
+          const remoteScores = entries.map((item) => ({
+            id: `dreamlo-${item.name}`,
+            name: (item.name || "").trim(),
+            score: parseInt(item.score, 10) || 0,
+            date: item.date || new Date().toISOString().split("T")[0],
+          })).filter((e) => e.name && e.score > 0 && e.score <= MAX_ALLOWED_SCORE);
+
+          this.mergeGlobalScores(remoteScores);
+        }
+      } catch {
+        // Offline fallback
+      }
+    }
+
     return this.scores;
   }
 

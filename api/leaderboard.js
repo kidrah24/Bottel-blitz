@@ -1,14 +1,14 @@
 const DREAMLO_PRIVATE_KEY = "fNj18yEImEWEw2cXfmdoLQROnPmX7pN0WHj4Nrlk-NWw";
 const DREAMLO_PUBLIC_KEY = "6aa67aaa8f40bb15a879a651";
 
-const DEFAULT_SCORES = [
-  { id: "score-def-1", name: "BladeMaster", score: 1850, date: "2026-08-10" },
-  { id: "score-def-2", name: "ViperSlice", score: 1620, date: "2026-08-12" },
-  { id: "score-def-3", name: "NinjaCombo", score: 1450, date: "2026-08-15" },
-  { id: "score-def-4", name: "BottleKing", score: 1280, date: "2026-08-18" },
-  { id: "score-def-5", name: "SmashQueen", score: 1100, date: "2026-08-20" },
-  { id: "score-def-6", name: "GlassCutter", score: 950, date: "2026-08-25" },
-  { id: "score-def-7", name: "RushMaster", score: 820, date: "2026-09-01" },
+const DUMMY_NAMES = [
+  "blademaster",
+  "viperslice",
+  "ninjacombo",
+  "bottleking",
+  "smashqueen",
+  "glasscutter",
+  "rushmaster",
 ];
 
 let inMemoryCache = [];
@@ -30,14 +30,17 @@ async function fetchFromDreamlo() {
   }
 
   const scoreMap = new Map();
-  DEFAULT_SCORES.forEach((def) => {
-    scoreMap.set(def.name.toLowerCase(), { ...def });
-  });
 
   entries.forEach((item) => {
     const rawName = (item.name || "").trim();
     const rawScore = parseInt(item.score, 10);
-    if (rawName && Number.isFinite(rawScore) && rawScore > 0 && rawScore <= 5000) {
+    if (
+      rawName &&
+      !DUMMY_NAMES.includes(rawName.toLowerCase()) &&
+      Number.isFinite(rawScore) &&
+      rawScore > 0 &&
+      rawScore <= 5000
+    ) {
       const key = rawName.toLowerCase();
       const existing = scoreMap.get(key);
       if (!existing || rawScore >= existing.score) {
@@ -110,6 +113,6 @@ export default async function handler(req, res) {
     if (inMemoryCache.length > 0) {
       return res.status(200).json({ success: true, scores: inMemoryCache, fallback: true });
     }
-    return res.status(200).json({ success: true, scores: DEFAULT_SCORES, fallback: true });
+    return res.status(200).json({ success: true, scores: [], fallback: true });
   }
 }

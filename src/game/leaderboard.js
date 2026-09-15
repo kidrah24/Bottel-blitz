@@ -3,14 +3,14 @@ const PLAYER_NAME_KEY = "bottle_blitz_player_name";
 const SECRET_SALT = "BB_v1_S3cr3t_S@lt_2026";
 const MAX_ALLOWED_SCORE = 5000;
 
-const DEFAULT_SCORES = [
-  { id: "score-def-1", name: "BladeMaster", score: 1850, date: "2026-08-10" },
-  { id: "score-def-2", name: "ViperSlice", score: 1620, date: "2026-08-12" },
-  { id: "score-def-3", name: "NinjaCombo", score: 1450, date: "2026-08-15" },
-  { id: "score-def-4", name: "BottleKing", score: 1280, date: "2026-08-18" },
-  { id: "score-def-5", name: "SmashQueen", score: 1100, date: "2026-08-20" },
-  { id: "score-def-6", name: "GlassCutter", score: 950, date: "2026-08-25" },
-  { id: "score-def-7", name: "RushMaster", score: 820, date: "2026-09-01" },
+const DUMMY_NAMES = [
+  "blademaster",
+  "viperslice",
+  "ninjacombo",
+  "bottleking",
+  "smashqueen",
+  "glasscutter",
+  "rushmaster",
 ];
 
 export function computeHash(dataStr) {
@@ -76,6 +76,8 @@ export class LeaderboardManager {
         if (Array.isArray(parsed)) {
           storedScores = parsed.filter((entry) => {
             if (!entry || typeof entry !== "object") return false;
+            if (entry.id && String(entry.id).startsWith("score-def-")) return false;
+            if (entry.name && DUMMY_NAMES.includes(String(entry.name).toLowerCase())) return false;
             if (!Number.isFinite(entry.score) || entry.score <= 0 || entry.score > MAX_ALLOWED_SCORE) return false;
             // Verify checksum signature if present
             if (entry.sig) {
@@ -95,13 +97,6 @@ export class LeaderboardManager {
 
     const activeName = (this.playerName || "").toLowerCase();
     const scoreMap = new Map();
-
-    DEFAULT_SCORES.forEach((def) => {
-      scoreMap.set(def.name.toLowerCase(), {
-        ...def,
-        sig: computeHash(`${def.id}:${def.name}:${def.score}`),
-      });
-    });
 
     storedScores.forEach((entry) => {
       const key = entry.name.toLowerCase();
@@ -233,12 +228,16 @@ export class LeaderboardManager {
 
     // Fill with current local scores first
     this.scores.forEach((entry) => {
+      if (entry.id && String(entry.id).startsWith("score-def-")) return;
+      if (entry.name && DUMMY_NAMES.includes(String(entry.name).toLowerCase())) return;
       scoreMap.set(entry.name.toLowerCase(), { ...entry });
     });
 
     // Merge remote scores (taking higher score per name)
     remoteScores.forEach((entry) => {
       if (!entry || !entry.name || !Number.isFinite(entry.score)) return;
+      if (entry.id && String(entry.id).startsWith("score-def-")) return;
+      if (DUMMY_NAMES.includes(String(entry.name).toLowerCase())) return;
       const key = entry.name.toLowerCase();
       const existing = scoreMap.get(key);
       if (!existing || entry.score >= existing.score) {

@@ -338,13 +338,18 @@ export function createGame({ mount, sdk, tweaks, assets }) {
       const MIN_LOADING_TIME = 1800; // Minimum 1.8 seconds loading screen time
       const loadStartTime = performance.now();
 
+      const withTimeout = (promise, ms = 1200) => Promise.race([
+        promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error(`Operation timed out after ${ms}ms`)), ms)),
+      ]);
+
       Promise.all([
         loadGameAssets(assets, (progress, statusText) => {
           ui.updateLoadingProgress(progress, statusText);
         }),
-        sdk.gameState.load().catch(() => null),
-        sdk.audio.getContext().catch(() => null),
-        leaderboardManager.fetchGlobalScores().catch(() => null),
+        withTimeout(sdk.gameState.load(), 1000).catch(() => null),
+        withTimeout(sdk.audio.getContext(), 1000).catch(() => null),
+        withTimeout(leaderboardManager.fetchGlobalScores(), 1500).catch(() => null),
       ]).then(([assetSet, saved, managedAudio]) => {
         if (destroyed) return;
         best = saved?.version === 3 && Number.isFinite(saved.best) ? Math.max(0, saved.best) : 0;

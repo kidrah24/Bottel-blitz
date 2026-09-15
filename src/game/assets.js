@@ -1,3 +1,5 @@
+import assetsManifest from "../assets.json";
+
 const BASE = import.meta.env.BASE_URL || "./";
 
 function resolveAssetUrl(url) {
@@ -34,7 +36,7 @@ async function loadFrames(url) {
 }
 
 export async function loadGameAssets(assets, onProgress = () => {}) {
-  const get = (key) => resolveAssetUrl(assets?.get(key));
+  const get = (key) => resolveAssetUrl(assets?.get(key) || assetsManifest[key]);
 
   const items = [
     { name: "BACKGROUND", load: () => loadImage(get("BAR_BG")) },

@@ -25,7 +25,7 @@ body {
 }
 
 body {
-  position: fixed;
+  position: absolute;
   inset: 0;
   touch-action: none;
   -webkit-user-select: none;

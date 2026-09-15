@@ -346,7 +346,11 @@ export function createRenderer(canvas, world) {
     },
     resize,
     render() {
-      if (!assetSet || !idlePrepared) return;
+      if (!assetSet) return;
+      if (!idlePrepared) {
+        resize();
+        if (!idlePrepared) return;
+      }
       ctx.clearRect(0, 0, cssWidth, cssHeight);
       const background = coverRect(assetSet.background, cssWidth, cssHeight);
       const shakeX = world.shake ? (Math.random() - 0.5) * world.shake : 0;

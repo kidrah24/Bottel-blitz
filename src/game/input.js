@@ -20,6 +20,7 @@ export function bindSliceInput(canvas, world, {
   const onPointerDown = (event) => {
     if (event.target.closest("button, [role='button'], .overlay") || !world.active || world.paused) return;
     event.preventDefault();
+    try { window.focus(); } catch (err) { void err; }
     pointerId = event.pointerId;
     previous = position(event);
     strokeStartedAt = performance.now();
@@ -29,7 +30,9 @@ export function bindSliceInput(canvas, world, {
     addTrailPoint(world, previous.x, previous.y);
     const result = sliceSegment(world, previous, previous);
     if (result.hits.length) onHit(result);
-    canvas.setPointerCapture(event.pointerId);
+    try {
+      canvas.setPointerCapture(event.pointerId);
+    } catch (err) { void err; }
   };
 
   const onPointerMove = (event) => {
@@ -71,6 +74,11 @@ export function bindSliceInput(canvas, world, {
 
   const release = (event) => {
     if (event.pointerId !== pointerId) return;
+    try {
+      if (canvas.hasPointerCapture && canvas.hasPointerCapture(event.pointerId)) {
+        canvas.releasePointerCapture(event.pointerId);
+      }
+    } catch (err) { void err; }
     pointerId = null;
     previous = null;
     swipeSoundPlayed = false;

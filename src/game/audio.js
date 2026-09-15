@@ -1,5 +1,18 @@
 export function createArcadeAudio(managedAudio) {
-  const context = managedAudio.context;
+  let context = managedAudio?.context;
+  if (!context && typeof window !== "undefined") {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (AudioContextClass) {
+      try {
+        context = new AudioContextClass();
+      } catch (err) {
+        console.warn("[Audio] Could not create fallback AudioContext:", err);
+      }
+    }
+  }
+
+  if (!context) return null;
+
   let beatTimer = 0;
   let beatStep = 0;
   let noiseBuffer = null;
@@ -12,6 +25,12 @@ export function createArcadeAudio(managedAudio) {
     return typeof document !== "undefined" && document.hidden;
   }
 
+  function ensureRunning() {
+    if (context && context.state === "suspended" && unlocked && !isBackgroundHidden()) {
+      void context.resume().catch(() => {});
+    }
+  }
+
   function getNoise() {
     if (noiseBuffer) return noiseBuffer;
     noiseBuffer = context.createBuffer(1, context.sampleRate * 0.6, context.sampleRate);
@@ -21,6 +40,7 @@ export function createArcadeAudio(managedAudio) {
   }
 
   function tone(frequency, duration, volume, type = "square", when = context.currentTime) {
+    ensureRunning();
     if (muted || context.state !== "running" || isBackgroundHidden()) return;
     const oscillator = context.createOscillator();
     const gain = context.createGain();
@@ -34,6 +54,7 @@ export function createArcadeAudio(managedAudio) {
   }
 
   function noise({ duration, volume, frequency, q = 0.7, type = "bandpass", delay = 0 }) {
+    ensureRunning();
     if (muted || context.state !== "running" || isBackgroundHidden()) return;
     const when = context.currentTime + delay;
     const source = context.createBufferSource();
@@ -80,12 +101,46 @@ export function createArcadeAudio(managedAudio) {
     beatTimer = window.setInterval(beat, interval);
   }
 
-  return {
-    unlockAndStart() {
-      void managedAudio.unlock().then(() => {
+  const handleUserGesture = () => {
+    if (context && context.state === "suspended") {
+      void context.resume().then(() => {
         unlocked = true;
         restartBeat();
       }).catch(() => {});
+    }
+  };
+
+  if (typeof window !== "undefined") {
+    window.addEventListener("pointerdown", handleUserGesture, { capture: true, passive: true });
+    window.addEventListener("keydown", handleUserGesture, { capture: true, passive: true });
+  }
+
+  return {
+    unlockAndStart() {
+      const resumeContext = () => {
+        if (context && context.state === "suspended") {
+          return context.resume().then(() => {
+            unlocked = true;
+            restartBeat();
+          }).catch(() => {
+            unlocked = true;
+            restartBeat();
+          });
+        }
+        unlocked = true;
+        restartBeat();
+        return Promise.resolve();
+      };
+
+      if (managedAudio && typeof managedAudio.unlock === "function") {
+        void managedAudio.unlock().then(() => {
+          return resumeContext();
+        }).catch(() => {
+          return resumeContext();
+        });
+      } else {
+        void resumeContext();
+      }
     },
     suspend() {
       window.clearInterval(beatTimer);
@@ -158,6 +213,10 @@ export function createArcadeAudio(managedAudio) {
     stop() {
       window.clearInterval(beatTimer);
       beatTimer = 0;
+      if (typeof window !== "undefined") {
+        window.removeEventListener("pointerdown", handleUserGesture, { capture: true });
+        window.removeEventListener("keydown", handleUserGesture, { capture: true });
+      }
     },
   };
 }

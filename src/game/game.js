@@ -223,6 +223,7 @@ export function createGame({ mount, sdk, tweaks, assets }) {
           window.location.reload();
           return;
         }
+        try { window.focus(); } catch (err) { void err; }
         audio?.unlockAndStart();
 
         const proceedToGame = () => {
@@ -358,7 +359,7 @@ export function createGame({ mount, sdk, tweaks, assets }) {
         }
         loadedAssets = assetSet;
         world.best = best;
-        audio = managedAudio ? createArcadeAudio(managedAudio) : null;
+        audio = createArcadeAudio(managedAudio);
         audio?.setMuted(muted);
         renderer.setAssets(assetSet);
         readyToPlay = true;
@@ -396,11 +397,13 @@ export function createGame({ mount, sdk, tweaks, assets }) {
       };
 
       const handleWindowBlur = () => {
-        audio?.suspend();
-        if (world.active && !world.ended && !world.paused) {
-          setPaused(world, true);
-          ui.showPause(true);
-          audio?.setPaused(true);
+        if (document.hidden) {
+          audio?.suspend();
+          if (world.active && !world.ended && !world.paused) {
+            setPaused(world, true);
+            ui.showPause(true);
+            audio?.setPaused(true);
+          }
         }
       };
 

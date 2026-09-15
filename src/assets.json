@@ -1,7 +1,7 @@
 {
   "BOTTLE_ATLAS": "generated-assets/bottle_atlas-transparent.png",
   "BAR_BG": "generated-assets/bar_bg.png",
-  "COVER_IMAGE": "generated-assets/cover.png",
+  "COVER_IMAGE": "generated-assets/cover.jpg",
   "SHARD_ATLAS": "generated-assets/shard_atlas-transparent.png",
   "SHATTER_SHEET": "generated-assets/shatter_sheet-transparent.png",
   "POWER_BOTTLE_ATLAS": "generated-assets/power_bottle_atlas-transparent.png",

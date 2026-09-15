@@ -16,7 +16,7 @@ let lastFetchTime = 0;
 const CACHE_TTL_MS = 5000;
 
 async function fetchFromDreamlo() {
-  const url = `http://dreamlo.com/lb/${DREAMLO_PUBLIC_KEY}/json`;
+  const url = `https://dreamlo.com/lb/${DREAMLO_PUBLIC_KEY}/json`;
   const res = await fetch(url, { headers: { Accept: "application/json" } });
   if (!res.ok) throw new Error(`Dreamlo HTTP error ${res.status}`);
   const data = await res.json();
@@ -62,7 +62,7 @@ async function fetchFromDreamlo() {
 async function submitToDreamlo(name, score) {
   const sanitizedName = encodeURIComponent(name.trim().slice(0, 15));
   const sanitizedScore = Math.min(5000, Math.max(1, Math.round(score)));
-  const url = `http://dreamlo.com/lb/${DREAMLO_PRIVATE_KEY}/add-json/${sanitizedName}/${sanitizedScore}`;
+  const url = `https://dreamlo.com/lb/${DREAMLO_PRIVATE_KEY}/add-json/${sanitizedName}/${sanitizedScore}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Dreamlo submit error ${res.status}`);
   return fetchFromDreamlo();

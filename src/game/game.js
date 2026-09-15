@@ -344,7 +344,7 @@ export function createGame({ mount, sdk, tweaks, assets }) {
           ui.hideLoadingScreen();
           ui.setReady(best);
           ui.setSoundMuted(muted);
-          ui.setPlayerHandle(leaderboardManager.getPlayerName(), leaderboardManager.hasPlayerName());
+          ui.setPlayerHandle(leaderboardManager.getPlayerName());
           // The surface was display:none while loading; size only after reveal.
           renderer.resize();
         }, remaining);

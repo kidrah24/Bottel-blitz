@@ -380,11 +380,50 @@ export function createGame({ mount, sdk, tweaks, assets }) {
         if (!destroyed) ui.setLoadError();
       });
 
+      const handleVisibilityChange = () => {
+        if (document.hidden) {
+          audio?.suspend();
+          if (world.active && !world.ended && !world.paused) {
+            setPaused(world, true);
+            ui.showPause(true);
+            audio?.setPaused(true);
+          }
+        } else {
+          if (!world.paused) {
+            audio?.resume();
+          }
+        }
+      };
+
+      const handleWindowBlur = () => {
+        audio?.suspend();
+        if (world.active && !world.ended && !world.paused) {
+          setPaused(world, true);
+          ui.showPause(true);
+          audio?.setPaused(true);
+        }
+      };
+
+      const handleWindowFocus = () => {
+        if (!document.hidden && !world.paused) {
+          audio?.resume();
+        }
+      };
+
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+      window.addEventListener("blur", handleWindowBlur);
+      window.addEventListener("focus", handleWindowFocus);
+      window.addEventListener("pagehide", handleVisibilityChange);
+
       animationFrame = requestAnimationFrame(loop);
 
       cleanup = () => {
         destroyed = true;
         cancelAnimationFrame(animationFrame);
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
+        window.removeEventListener("blur", handleWindowBlur);
+        window.removeEventListener("focus", handleWindowFocus);
+        window.removeEventListener("pagehide", handleVisibilityChange);
         audio?.stop();
         inputCleanup();
         renderer.destroy();

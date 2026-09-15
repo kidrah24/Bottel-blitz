@@ -8,6 +8,10 @@ export function createArcadeAudio(managedAudio) {
   let paused = false;
   let mode = "normal";
 
+  function isBackgroundHidden() {
+    return typeof document !== "undefined" && document.hidden;
+  }
+
   function getNoise() {
     if (noiseBuffer) return noiseBuffer;
     noiseBuffer = context.createBuffer(1, context.sampleRate * 0.6, context.sampleRate);
@@ -17,7 +21,7 @@ export function createArcadeAudio(managedAudio) {
   }
 
   function tone(frequency, duration, volume, type = "square", when = context.currentTime) {
-    if (muted || context.state !== "running") return;
+    if (muted || context.state !== "running" || isBackgroundHidden()) return;
     const oscillator = context.createOscillator();
     const gain = context.createGain();
     oscillator.type = type;
@@ -30,7 +34,7 @@ export function createArcadeAudio(managedAudio) {
   }
 
   function noise({ duration, volume, frequency, q = 0.7, type = "bandpass", delay = 0 }) {
-    if (muted || context.state !== "running") return;
+    if (muted || context.state !== "running" || isBackgroundHidden()) return;
     const when = context.currentTime + delay;
     const source = context.createBufferSource();
     const filter = context.createBiquadFilter();
@@ -69,7 +73,7 @@ export function createArcadeAudio(managedAudio) {
   function restartBeat() {
     window.clearInterval(beatTimer);
     beatTimer = 0;
-    if (!unlocked || muted || paused || context.state !== "running") return;
+    if (!unlocked || muted || paused || context.state !== "running" || isBackgroundHidden()) return;
     beatStep = 0;
     beat();
     const interval = mode === "frenzy" ? 145 : (mode === "frozen" ? 520 : 220);
@@ -82,6 +86,23 @@ export function createArcadeAudio(managedAudio) {
         unlocked = true;
         restartBeat();
       }).catch(() => {});
+    },
+    suspend() {
+      window.clearInterval(beatTimer);
+      beatTimer = 0;
+      if (context && context.state === "running") {
+        void context.suspend().catch(() => {});
+      }
+    },
+    resume() {
+      if (!unlocked || muted || paused || isBackgroundHidden()) return;
+      if (context && context.state === "suspended") {
+        void context.resume().then(() => {
+          restartBeat();
+        }).catch(() => {});
+      } else {
+        restartBeat();
+      }
     },
     setMuted(value) {
       muted = Boolean(value);
